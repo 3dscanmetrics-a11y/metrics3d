@@ -1,0 +1,4 @@
+﻿const db = require('better-sqlite3')('crm.db'); 
+db.exec(`CREATE TABLE IF NOT EXISTS leads (id TEXT PRIMARY KEY, email TEXT NOT NULL, name TEXT, company TEXT, project TEXT, area REAL, complexity TEXT, deliverables TEXT, status TEXT DEFAULT 'PENDING', quoteTotal REAL, fieldDays INTEGER, processDays INTEGER, rawEmail TEXT, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP);`); 
+db.prepare(`INSERT INTO leads (id, email, name, company, project, area, complexity, deliverables, status, quoteTotal, fieldDays, processDays, rawEmail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run('dummy-123', 'john.doe@aec-partners.com', 'John Doe', 'AEC Partners', 'Sandton Mega Mall Scoping', 25000, 'Civil Infrastructure', '["viewer","cad","bim"]', 'PENDING', 296125.00, 20, 40, 'Hi Team, please see the attached PDF blueprints for the Sandton project. We need a full scan to BIM LOD200. Thanks!');
+console.log('Dummy lead inserted!');

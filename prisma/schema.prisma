@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Lead {
+  id           String   @id @default(cuid())
+  email        String
+  name         String?
+  company      String?
+  project      String?
+  area         Float?
+  complexity   String?
+  deliverables String?  // Stored as JSON string
+  status       String   @default("PENDING") // PENDING, APPROVED, SENT, REJECTED
+  quoteTotal   Float?
+  fieldDays    Int?
+  processDays  Int?
+  rawEmail     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
