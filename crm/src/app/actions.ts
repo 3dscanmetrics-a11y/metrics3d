@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { randomUUID } from 'crypto';
 import { generateQuotePDF } from '@/lib/pdf';
 import { Resend } from 'resend';
-import { calculateQuote } from '../../scripts/engine';
+import { calculateEstimateRange, DEFAULT_PRICING, formatRange } from '@/lib/pricing';
 
 export async function getLeads() {
   const db = await getDb();
@@ -110,72 +110,111 @@ export async function rejectLead(id: string) {
   revalidatePath('/');
 }
 
-export async function updateAndApproveLead(formData: FormData) {
+function quoteFromForm(formData: FormData) {
+  let deliverables: string[] = [];
+  try {
+    deliverables = JSON.parse(String(formData.get('deliverables') || '[]'));
+  } catch {
+    deliverables = [];
+  }
+  const area = Number(formData.get('area'));
+  const complexity = String(formData.get('complexity') || '');
+  const access = String(formData.get('access') || '');
+  const accuracy = String(formData.get('accuracy') || 'Standard');
+  const bimLevel = String(formData.get('bimLevel') || '300');
+  const range = calculateEstimateRange(DEFAULT_PRICING, {
+    area,
+    complexity,
+    deliverables,
+    access,
+    accuracy,
+    bimLevel,
+  });
+  const firm = Number(formData.get('firmAmount')) || range.mid;
+  return { area, complexity, access, accuracy, bimLevel, deliverables, range, firm };
+}
+
+async function persistLeadQuote(
+  db: CloudflareEnv['DB'],
+  id: string,
+  existingPayload: Record<string, unknown>,
+  q: ReturnType<typeof quoteFromForm>,
+  originalFormatted?: string
+) {
+  const payload = {
+    ...existingPayload,
+    area: q.area,
+    complexity: q.complexity,
+    access: q.access,
+    accuracy: q.accuracy,
+    bimLevel: q.bimLevel,
+    deliverables: q.deliverables,
+    firmAmount: q.firm,
+    publicEstimate:
+      existingPayload.publicEstimate || originalFormatted || formatRange(q.range.low, q.range.high),
+  };
+  await db
+    .prepare(
+      `UPDATE leads SET area = ?, complexity = ?, deliverables_json = ?, payload_json = ?,
+       estimate_zar = ?, estimate_formatted = ?, estimate_low = ?, estimate_high = ?,
+       field_days = ?, process_days = ?, updated_at = datetime('now') WHERE id = ?`
+    )
+    .bind(
+      q.area,
+      q.complexity,
+      JSON.stringify(q.deliverables),
+      JSON.stringify(payload),
+      q.range.mid,
+      formatRange(q.range.low, q.range.high),
+      q.range.low,
+      q.range.high,
+      q.range.fieldDays,
+      q.range.processDays,
+      id
+    )
+    .run();
+}
+
+export async function saveLeadQuote(formData: FormData) {
   const id = formData.get('id') as string;
   const db = await getDb();
   const lead = await fetchLead(db, id);
   if (!lead) return;
+  const q = quoteFromForm(formData);
+  await persistLeadQuote(db, id, lead.payload, q, lead.estimateFormatted);
+  revalidatePath('/');
+}
 
-  const newArea = Number(formData.get('area'));
-  const newComplexity = formData.get('complexity') as string;
-  const parsedDeliverables = JSON.parse((lead.deliverables as string) || '[]');
+export async function sendFormalQuote(formData: FormData) {
+  const id = formData.get('id') as string;
+  const db = await getDb();
+  const lead = await fetchLead(db, id);
+  if (!lead) return;
+  const q = quoteFromForm(formData);
+  await persistLeadQuote(db, id, lead.payload, q, lead.estimateFormatted);
 
-  const baseRateStr = formData.get('baseRate');
-  const finalPriceStr = formData.get('finalPrice');
+  const updated = await fetchLead(db, id);
+  if (!updated) return;
+  const forPdf = { ...updated, quoteTotal: q.firm };
 
-  const overrides: { baseRate?: number; finalPrice?: number } = {};
-  if (baseRateStr) overrides.baseRate = Number(baseRateStr);
-  if (finalPriceStr) overrides.finalPrice = Number(finalPriceStr);
-
-  const quote = calculateQuote(newArea, newComplexity as never, parsedDeliverables, overrides);
-  const formatted = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(quote.totalPrice);
-
-  await db
-    .prepare(
-      `UPDATE leads SET area = ?, complexity = ?, estimate_zar = ?, estimate_formatted = ?,
-       field_days = ?, process_days = ?, status = ?, updated_at = datetime('now') WHERE id = ?`
-    )
-    .bind(newArea, newComplexity, quote.totalPrice, formatted, quote.fieldDays, quote.processDays, toDbStatus('APPROVED'), id)
-    .run();
-
-  const updatedLead = await fetchLead(db, id);
-  if (!updatedLead) return;
-
-  const pdfBuffer = await generateQuotePDF(updatedLead);
-
-  const files = formData.getAll('extra_attachments') as File[];
-  const customAttachments = await Promise.all(
-    files
-      .filter((f) => f.size > 0)
-      .map(async (file) => {
-        const arrayBuffer = await file.arrayBuffer();
-        return {
-          filename: file.name,
-          content: Buffer.from(arrayBuffer),
-        };
-      })
-  );
-
-  const allAttachments = [
-    {
-      filename: `Quote_3DScanMetrics_${String(updatedLead.project || 'Project').replace(/\s+/g, '_')}.pdf`,
-      content: pdfBuffer,
-    },
-    ...customAttachments,
-  ];
-
+  const pdfBuffer = await generateQuotePDF(forPdf);
   if (process.env.RESEND_API_KEY) {
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
       await resend.emails.send({
         from: '3D Scan Metrics <estimates@3dscanmetrics.co.za>',
-        to: String(updatedLead.email),
-        subject: `Your Formal Quote: ${(updatedLead.project as string) || '3D Scanning Project'}`,
-        html: `<p>Hi ${(updatedLead.name as string) || 'there'},</p><p>Please find attached your formal scoping estimate, along with any requested documentation.</p>`,
-        attachments: allAttachments,
+        to: String(updated.email),
+        subject: `Your Formal Quote: ${updated.project || '3D Scanning Project'}`,
+        html: `<p>Hi ${updated.name || 'there'},</p><p>Please find attached your formal scoping estimate.</p>`,
+        attachments: [
+          {
+            filename: `Quote_3DScanMetrics_${String(updated.project || 'Project').replace(/\s+/g, '_')}.pdf`,
+            content: pdfBuffer,
+          },
+        ],
       });
-    } catch {
-      /* ignore email failures for MVP */
+    } catch (e) {
+      console.error('[sendFormalQuote] email failed', e);
     }
   }
 
@@ -188,12 +227,16 @@ export async function updateAndApproveLead(formData: FormData) {
     .prepare('INSERT INTO invoices (id, lead_id, client_name, project, amount) VALUES (?, ?, ?, ?, ?)')
     .bind(
       randomUUID(),
-      updatedLead.id,
-      (updatedLead.name as string) || (updatedLead.company as string) || 'Unknown',
-      (updatedLead.project as string) || 'Unknown',
-      updatedLead.quoteTotal
+      updated.id,
+      updated.name || updated.company || 'Unknown',
+      updated.project || 'Unknown',
+      q.firm
     )
     .run();
 
   revalidatePath('/');
+}
+
+export async function updateAndApproveLead(formData: FormData) {
+  return sendFormalQuote(formData);
 }

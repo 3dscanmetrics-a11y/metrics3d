@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>3D Scan Metrics | Contact & Estimate</title>
     <meta name="description" content="3D laser scanning for Property Development. Accurate as-built surveys, BIM modeling, and digital twins for real estate and commercial development.">
     <link rel="stylesheet" href="styles.css">
@@ -55,10 +55,10 @@
         <div class="container">
             <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4rem;">
                 <div class="hero-content">
-                    <h1 style="font-size: 3.5rem;">Contact Us</h1>
+                    <h1>Contact Us</h1>
                     <p>Reach out to our technical team directly or use our automated calculator below to get an instant scoping estimate for your project.</p>
-                    <div style="display: flex; gap: 1rem;">
-                        <a href="#contact" class="cta-btn">Request an Estimate</a>
+                    <div class="hero-actions" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <a href="#estimator" class="cta-btn">Request an Estimate</a>
                     </div>
                 </div>
                 <div class="hero-image">
@@ -73,7 +73,7 @@
 <section class="calculator" id="estimator">
         <div class="container">
             <h2>Get Your Rough Estimate in Seconds</h2>
-            <p style="max-width: 650px; margin: 0 auto 1rem;">Skip the back-and-forth. Configure your site details below and our pricing engine will instantly generate an indicative estimate for your project.</p>
+            <p style="max-width: 650px; margin: 0 auto 1rem;">Skip the back-and-forth. Configure your site details below and our pricing engine will instantly generate an <strong>indicative price range</strong> — not a formal quotation.</p>
             <p style="text-align: center; margin-bottom: 3rem;"><a href="mailto:isaiah@3dscanmetrics.co.za?subject=Request for Proposal" style="color: var(--primary-cyan); text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;"><i class="ph ph-paperclip"></i> Have an official RFP? Email us your documents directly.</a></p>
             
             <div class="calc-grid">
@@ -116,8 +116,8 @@
                             <div class="calc-field-row">
                                 <label for="calc-area">Approximate Size (sqm) <span style="color:var(--primary-cyan)">*Affects Estimate</span></label>
                                 <div style="display: flex; flex-direction: column; gap: 8px;">
-                                    <div style="display: flex; align-items: center; gap: 10px;">
-                                        <input type="checkbox" id="q-area-unknown" style="width: auto; margin: 0; cursor: pointer;">
+                                    <div class="area-unknown-row">
+                                        <input type="checkbox" id="q-area-unknown">
                                         <label for="q-area-unknown" style="font-size: 0.9rem; margin: 0; font-weight: normal; cursor: pointer; color: var(--text-muted);">I don't know the exact size in sqm</label>
                                     </div>
                                     <input type="number" id="calc-area" value="500" min="1" step="50" required>
@@ -160,7 +160,7 @@
                                     <option value="No, need supplementary lighting/battery packs">No, need supplementary lighting/battery packs</option>
                                 </select>
                             </div>
-                            <div class="calc-field-row" style="display:flex; gap:10px;">
+                            <div class="calc-field-row calc-dates" style="display:flex; gap:10px;">
                                 <div style="flex:1">
                                     <label for="q-date-mob">Target Mobilization</label>
                                     <input type="date" id="q-date-mob" required>
@@ -293,7 +293,7 @@
     <section class="bottom-cta" style="background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(41, 121, 255, 0.1)); padding: 6rem 0; text-align: center; border-top: 1px solid var(--glass-border);">
         <div class="container">
             <h2 style="font-size: 3rem; margin-bottom: 1.5rem; color: var(--text-main);">Ready to Discuss Your Next Project?</h2>
-            <p style="font-size: 1.2rem; color: var(--text-muted); max-width: 700px; margin: 0 auto 3rem; text-align: center;">Get an exact quote based on your site complexity, required tolerances, and deliverables.</p>
+            <p style="font-size: 1.2rem; color: var(--text-muted); max-width: 700px; margin: 0 auto 3rem; text-align: center;">Get an indicative price range based on your site complexity, required tolerances, and deliverables.</p>
                         <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
                 <a href="/contact.html#estimator" class="cta-btn">Request an Instant Estimate</a>
                 <a href="tel:+27827336873" class="cta-btn-secondary"><i class="ph ph-phone"></i> Call a Technical Expert</a>

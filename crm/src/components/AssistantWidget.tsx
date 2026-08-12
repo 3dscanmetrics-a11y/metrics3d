@@ -46,7 +46,7 @@ export default function AssistantWidget() {
       {!isOpen && (
         <button 
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 p-4 bg-cyan-500 hover:bg-cyan-600 text-white rounded-full shadow-2xl transition-transform hover:scale-110 z-50 flex items-center justify-center"
+          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 p-4 bg-cyan-500 hover:bg-cyan-600 text-white rounded-full shadow-2xl transition-transform hover:scale-110 z-50 flex items-center justify-center"
         >
           <Bot className="w-6 h-6" />
         </button>
@@ -54,7 +54,7 @@ export default function AssistantWidget() {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-80 md:w-96 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-20 left-3 right-3 md:left-auto md:bottom-6 md:right-6 md:w-96 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
           <div className="bg-gray-900 p-4 flex justify-between items-center">
             <div className="flex items-center text-white">
               <Bot className="w-5 h-5 mr-2 text-cyan-400" />
@@ -65,7 +65,7 @@ export default function AssistantWidget() {
             </button>
           </div>
           
-          <div className="h-96 p-4 overflow-y-auto bg-gray-50 flex flex-col space-y-4 text-sm">
+          <div className="h-[50dvh] max-h-96 p-4 overflow-y-auto bg-gray-50 flex flex-col space-y-4 text-sm">
             <div className="bg-cyan-50 border border-cyan-100 text-cyan-900 p-3 rounded-lg rounded-tl-none self-start max-w-[85%]">
               Hello Director. How can I assist you with the CRM today? Try asking me to log an expense or summarize our revenue.
             </div>
@@ -88,7 +88,7 @@ export default function AssistantWidget() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
               placeholder="Command the AI..."
-              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              className="flex-1 px-3 py-3 md:py-2 text-base md:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
             />
             <button onClick={handleSend} disabled={loading} className="ml-2 p-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 disabled:opacity-50">
               <Send className="w-4 h-4" />

@@ -1,14 +1,8 @@
-import { loadPricing, calculateEstimate } from './pricing.js';
+import { loadPricing, calculateEstimateRange } from './pricing.js';
 import { sendResendEmail, clientEstimateHtml, leadNotifyHtml } from './email.js';
 
-/** Simple per-isolate rate limit: 8 quote posts / IP / 10 minutes */
 const quoteHits = new Map();
 
-/**
- * @param {Request} request
- * @param {Env} env
- * @param {ExecutionContext} ctx
- */
 export async function handleQuote(request, env, ctx) {
   if (request.method === 'OPTIONS') {
     return cors(new Response(null, { status: 204 }));
@@ -49,16 +43,25 @@ export async function handleQuote(request, env, ctx) {
 
   try {
     const pricing = await loadPricing(env.DB);
-    const estimate = calculateEstimate(pricing, { area, complexity, deliverables });
+    const estimate = calculateEstimateRange(pricing, {
+      area,
+      complexity,
+      deliverables,
+      access: body.access,
+      accuracy: body.accuracy,
+      bimLevel: body.bimLevel || body.lod,
+      areaUnknown: Boolean(body.areaUnknown),
+      areaBucket: body.areaBucket || (body.areaUnknown ? area : undefined),
+    });
     const leadId = crypto.randomUUID();
-    const payload = body;
+    const payload = { ...body, publicEstimate: estimate.formatted };
 
     await env.DB.prepare(
       `INSERT INTO leads (
         id, email, phone, project, company, contact_name, site_location,
         area, complexity, deliverables_json, payload_json,
-        estimate_zar, estimate_formatted, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`
+        estimate_zar, estimate_formatted, estimate_low, estimate_high, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`
     )
       .bind(
         leadId,
@@ -68,12 +71,14 @@ export async function handleQuote(request, env, ctx) {
         body.company ? String(body.company) : null,
         body.contact_name || body.contact ? String(body.contact_name || body.contact) : null,
         body.location || body.site_location ? String(body.location || body.site_location) : null,
-        area,
+        estimate.area,
         complexity,
         JSON.stringify(deliverables),
         JSON.stringify(payload),
-        estimate.amount,
-        estimate.formatted
+        estimate.mid,
+        estimate.formatted,
+        estimate.low,
+        estimate.high
       )
       .run();
 
@@ -86,10 +91,10 @@ export async function handleQuote(request, env, ctx) {
             apiKey,
             from,
             to: email,
-            subject: `Scoping Estimate Ready - ${project}`,
+            subject: `Indicative Scoping Estimate - ${project}`,
             html: clientEstimateHtml({
               project,
-              area,
+              area: estimate.area,
               complexity,
               estimate: estimate.formatted,
             }),
@@ -122,6 +127,9 @@ export async function handleQuote(request, env, ctx) {
       json({
         success: true,
         estimate: estimate.formatted,
+        low: estimate.low,
+        mid: estimate.mid,
+        high: estimate.high,
         leadId,
       })
     );

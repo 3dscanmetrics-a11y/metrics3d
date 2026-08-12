@@ -34,18 +34,14 @@ export async function POST(req: Request) {
     const metrics = await extractMetricsFromRFP(rawContext);
     const pricing = calculateQuote(metrics.area, metrics.complexity as never, metrics.deliverables);
 
-    const formatted = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(
-      pricing.totalPrice || 0
-    );
-
     const db = await getDb();
     await db
       .prepare(
         `INSERT INTO leads (
           id, email, phone, project, company, contact_name, site_location,
           area, complexity, deliverables_json, payload_json,
-          estimate_zar, estimate_formatted, status, raw_email, field_days, process_days
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`
+          estimate_zar, estimate_formatted, estimate_low, estimate_high, status, raw_email, field_days, process_days
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`
       )
       .bind(
         randomUUID(),
@@ -58,9 +54,16 @@ export async function POST(req: Request) {
         metrics.area,
         metrics.complexity,
         JSON.stringify(metrics.deliverables),
-        JSON.stringify({ source: 'email-webhook', subject }),
+        JSON.stringify({
+          source: 'email-webhook',
+          subject,
+          deliverables: metrics.deliverables,
+          publicEstimate: pricing.formatted,
+        }),
         pricing.totalPrice,
-        formatted,
+        pricing.formatted,
+        pricing.low,
+        pricing.high,
         rawContext,
         pricing.fieldDays,
         pricing.processDays

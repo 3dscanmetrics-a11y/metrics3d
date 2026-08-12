@@ -49,13 +49,13 @@ export function generateQuotePDF(lead: any): Promise<Buffer> {
       const formatZAR = (val: number) => new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(val || 0);
       
       doc.rect(50, doc.y, 500, 60).fill('#f3f4f6');
-      doc.fillColor('#111827').fontSize(14).font('Helvetica-Bold').text('Total Estimated Investment:', 70, doc.y + 20, { continued: true });
+      doc.fillColor('#111827').fontSize(14).font('Helvetica-Bold').text('Formal quoted amount:', 70, doc.y + 20, { continued: true });
       doc.fillColor('#10b981').fontSize(18).text(`   ${formatZAR(lead.quoteTotal)}`);
       
       doc.moveDown(4);
 
       // Footer
-      doc.fillColor('#6b7280').fontSize(10).font('Helvetica-Oblique').text('Note: This is an automated preliminary estimate based on the specifications provided. A lead engineer will follow up shortly to confirm scope and availability.', 50, doc.y, { align: 'center', width: 500 });
+      doc.fillColor('#6b7280').fontSize(10).font('Helvetica-Oblique').text('Note: This formal scoping estimate is based on the reviewed parameters above. Scope change may result in a revised quotation.', 50, doc.y, { align: 'center', width: 500 });
 
       // Add a new page for Terms & Conditions
       doc.addPage();

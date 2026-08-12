@@ -6,13 +6,19 @@ export type MappedLead = Record<string, unknown> & {
   name: string;
   company: string;
   project: string;
+  area: number;
+  complexity: string;
   quoteTotal: number;
+  estimateFormatted: string;
+  estimateLow: number;
+  estimateHigh: number;
   deliverables: string;
   rawEmail: string;
   fieldDays: number;
   processDays: number;
   createdAt: string;
   status: string;
+  payload: Record<string, unknown>;
 };
 
 export function mapLead(row: Record<string, unknown> | null): MappedLead | null {
@@ -29,15 +35,28 @@ export function mapLead(row: Record<string, unknown> | null): MappedLead | null 
     (row.deliverables_json as string) ||
     '[]';
 
+  let payload: Record<string, unknown> = {};
+  try {
+    payload = JSON.parse(String(row.payload_json || row.payload || '{}')) || {};
+  } catch {
+    payload = {};
+  }
+
   return {
     ...row,
     id: String(row.id || ''),
     email: String(row.email || ''),
     company: String(row.company || ''),
     project: String(row.project || ''),
+    area: Number(row.area || 0),
+    complexity: String(row.complexity || ''),
     name: (row.name as string) || (row.contact_name as string) || '',
     quoteTotal: Number(row.quoteTotal ?? row.estimate_zar ?? 0),
+    estimateFormatted: String(row.estimate_formatted || row.estimateFormatted || ''),
+    estimateLow: Number(row.estimate_low ?? row.estimateLow ?? 0),
+    estimateHigh: Number(row.estimate_high ?? row.estimateHigh ?? 0),
     deliverables,
+    payload,
     rawEmail: (row.rawEmail as string) || (row.raw_email as string) || '',
     fieldDays: Number(row.fieldDays ?? row.field_days ?? 0),
     processDays: Number(row.processDays ?? row.process_days ?? 0),

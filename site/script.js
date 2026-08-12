@@ -206,9 +206,27 @@
                     }
 
                     const payload = {
-                        email, phone, project,
+                        email,
+                        phone,
+                        project,
+                        company: document.getElementById('q-company')?.value || '',
+                        contact: document.getElementById('q-contact')?.value || '',
+                        contact_name: document.getElementById('q-contact')?.value || '',
                         area: finalArea,
-                        complexity: document.getElementById('calc-complexity') ? document.getElementById('calc-complexity').value : 'medium',
+                        areaUnknown: isUnknown,
+                        areaBucket: isUnknown ? (document.getElementById('calc-area-bucket')?.value || finalArea) : undefined,
+                        complexity: document.getElementById('calc-complexity') ? document.getElementById('calc-complexity').value : 'Commercial/Retail/Residential',
+                        purpose: document.getElementById('q-purpose')?.value || '',
+                        access: document.getElementById('q-access')?.value || '',
+                        safety: document.getElementById('q-safety')?.value || '',
+                        power: document.getElementById('q-power')?.value || '',
+                        accuracy: document.getElementById('q-accuracy')?.value || 'Standard',
+                        control: document.getElementById('q-control')?.value || '',
+                        bimLevel: document.getElementById('q-bim-level')?.value || '300',
+                        systems: document.getElementById('q-systems')?.value || '',
+                        reference: document.getElementById('q-reference')?.value || '',
+                        dateMob: document.getElementById('q-date-mob')?.value || '',
+                        dateDue: document.getElementById('q-date-due')?.value || '',
                         deliverables: typeof selectedDelivs !== 'undefined' ? Array.from(selectedDelivs) : []
                     };
 
@@ -220,9 +238,12 @@
                         });
                         
                         if(res.ok) {
+                            const data = await res.json().catch(() => ({}));
                             if(totalDisplay) {
-                                totalDisplay.textContent = 'Estimate Sent Successfully';
-                                totalDisplay.style.color = '#00e5ff'; // cyan
+                                totalDisplay.textContent = data.estimate
+                                    ? ('Indicative range: ' + data.estimate)
+                                    : 'Estimate sent — check your inbox';
+                                totalDisplay.style.color = '#00e5ff';
                             }
                             nextBtn.textContent = 'Waiting in your inbox';
                         } else {
@@ -459,18 +480,38 @@
 
     const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
     const navLinks = document.getElementById("nav-links");
+
+    function setMenuOpen(open) {
+        if (!navLinks || !mobileMenuToggle) return;
+        navLinks.classList.toggle("active", open);
+        document.body.classList.toggle("menu-open", open);
+        const icon = mobileMenuToggle.querySelector("i");
+        if (icon) {
+            icon.classList.toggle("ph-list", !open);
+            icon.classList.toggle("ph-x", open);
+        }
+        mobileMenuToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    }
     
     if (mobileMenuToggle && navLinks) {
+        mobileMenuToggle.setAttribute("role", "button");
+        mobileMenuToggle.setAttribute("aria-label", "Open menu");
         mobileMenuToggle.addEventListener("click", () => {
-            navLinks.classList.toggle("active");
-            const icon = mobileMenuToggle.querySelector("i");
-            if (navLinks.classList.contains("active")) {
-                icon.classList.remove("ph-list");
-                icon.classList.add("ph-x");
-            } else {
-                icon.classList.remove("ph-x");
-                icon.classList.add("ph-list");
-            }
+            setMenuOpen(!navLinks.classList.contains("active"));
+        });
+        navLinks.querySelectorAll(".dropdown > a").forEach((link) => {
+            link.addEventListener("click", (e) => {
+                if (window.innerWidth > 1024) return;
+                e.preventDefault();
+                const parent = link.parentElement;
+                navLinks.querySelectorAll(".dropdown.open").forEach((el) => {
+                    if (el !== parent) el.classList.remove("open");
+                });
+                parent.classList.toggle("open");
+            });
+        });
+        navLinks.querySelectorAll(".dropdown-content a, li:not(.dropdown) > a").forEach((link) => {
+            link.addEventListener("click", () => setMenuOpen(false));
         });
     }
 
