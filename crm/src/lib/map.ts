@@ -1,6 +1,21 @@
 const OPEN_STATUSES = new Set(['new', 'pending', 'contacted', 'PENDING']);
 
-export function mapLead(row: Record<string, unknown> | null) {
+export type MappedLead = Record<string, unknown> & {
+  id: string;
+  email: string;
+  name: string;
+  company: string;
+  project: string;
+  quoteTotal: number;
+  deliverables: string;
+  rawEmail: string;
+  fieldDays: number;
+  processDays: number;
+  createdAt: string;
+  status: string;
+};
+
+export function mapLead(row: Record<string, unknown> | null): MappedLead | null {
   if (!row) return null;
   const rawStatus = String(row.status || 'new');
   let status = 'PENDING';
@@ -16,6 +31,10 @@ export function mapLead(row: Record<string, unknown> | null) {
 
   return {
     ...row,
+    id: String(row.id || ''),
+    email: String(row.email || ''),
+    company: String(row.company || ''),
+    project: String(row.project || ''),
     name: (row.name as string) || (row.contact_name as string) || '',
     quoteTotal: Number(row.quoteTotal ?? row.estimate_zar ?? 0),
     deliverables,
