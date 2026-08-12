@@ -1,0 +1,15 @@
+{
+  "name": "3dscanmetrics-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "3D Scan Metrics public marketing site + Instant Estimate API",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-dist.mjs",
+    "dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.121.0"
+  }
+}

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Scan Metrics | Contact & Estimate</title>
+    <meta name="description" content="3D laser scanning for Property Development. Accurate as-built surveys, BIM modeling, and digital twins for real estate and commercial development.">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body>
+
+    <!-- Navbar -->
+                    <nav>
+            <a href="/" class="logo" aria-label="3D Scan Metrics Home">
+                <i class="ph ph-cube-transparent" style="color: var(--primary-cyan);"></i>
+                3D Scan <span>Metrics</span>
+            </a>
+            <div class="mobile-menu-toggle" id="mobile-menu-toggle">
+                <i class="ph ph-list"></i>
+            </div>
+            <ul class="nav-links" id="nav-links">
+                <li class="dropdown">
+                    <a href="/services">Services <i class="ph ph-caret-down"></i></a>
+                    <div class="dropdown-content">
+                        <a href="/services/3d-laser-scanning">3D Laser Scanning</a>
+                        <a href="/services/scan-to-bim">Scan to BIM</a>
+                        <a href="/services/reverse-engineering">Reverse Engineering</a>
+                        <a href="/services/quality-inspection">Quality Inspection</a>
+                    </div>
+                </li>
+                <li><a href="/#why-us">Why Us</a></li>
+                <li><a href="/#technology">Technology</a></li>
+                <li class="dropdown">
+                    <a href="/#industries">Industries <i class="ph ph-caret-down"></i></a>
+                    <div class="dropdown-content">
+                        <a href="/industry-property-development">Property Development</a>
+                        <a href="/industry-civil-infrastructure">Civil Infrastructure</a>
+                        <a href="/industry-mining">Mining & Underground</a>
+                    </div>
+                </li>
+                <li><a href="/contact.html">Contact</a></li>
+            
+                <li class="mobile-only-cta" style="display: none; margin-top: 1rem;"><a href="tel:+27827336873" class="cta-btn-secondary" style="width: 100%; justify-content: center; display: flex;"><i class="ph ph-phone"></i> +27 82 733 6873</a></li>
+                <li class="mobile-only-cta" style="display: none; margin-top: 0.5rem;"><a href="/contact.html#estimator" class="cta-btn" style="width: 100%; justify-content: center; display: flex;">Request an Instant Estimate</a></li>
+            </ul>
+            <div class="desktop-nav-cta" style="display: flex; gap: 1rem; align-items: center;">
+                <a href="tel:+27827336873" class="cta-btn-secondary"><i class="ph ph-phone"></i> +27 82 733 6873</a>
+                <a href="/contact.html#estimator" class="cta-btn">Request an Instant Estimate</a>
+            </div>
+        </nav>
+
+    <!-- Hero Section -->
+    <section class="hero hero-subpage" id="home">
+        <div class="container">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4rem;">
+                <div class="hero-content">
+                    <h1 style="font-size: 3.5rem;">Contact Us</h1>
+                    <p>Reach out to our technical team directly or use our automated calculator below to get an instant scoping estimate for your project.</p>
+                    <div style="display: flex; gap: 1rem;">
+                        <a href="#contact" class="cta-btn">Request an Estimate</a>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <img src="https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=format&fit=crop&q=80&w=800" alt="Contact 3D Scan Metrics South Africa">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Industry Specific Features -->
+    
+<section class="calculator" id="estimator">
+        <div class="container">
+            <h2>Get Your Rough Estimate in Seconds</h2>
+            <p style="max-width: 650px; margin: 0 auto 1rem;">Skip the back-and-forth. Configure your site details below and our pricing engine will instantly generate an indicative estimate for your project.</p>
+            <p style="text-align: center; margin-bottom: 3rem;"><a href="mailto:isaiah@3dscanmetrics.co.za?subject=Request for Proposal" style="color: var(--primary-cyan); text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;"><i class="ph ph-paperclip"></i> Have an official RFP? Email us your documents directly.</a></p>
+            
+            <div class="calc-grid">
+                <!-- LEFT: controls -->
+                <div class="calc-panel">
+                    <div class="wizard-progress">
+                        <div class="wizard-step active" data-step="1">1. Scope</div>
+                        <div class="wizard-step" data-step="2">2. Logistics</div>
+                        <div class="wizard-step" data-step="3">3. Accuracy</div>
+                        <div class="wizard-step" data-step="4">4. Deliverables</div>
+                        <div class="wizard-step" data-step="5">5. Details</div>
+                    </div>
+
+                    <form id="scoping-form">
+                        <!-- Step 1: Scope & Environment -->
+                        <div class="wizard-panel active" id="wizard-step-1">
+                            <p class="calc-panel-label">1. Project Scope & Environment</p>
+                            <div class="calc-field-row">
+                                <label for="calc-complexity">Site Environment Type <span style="color:var(--primary-cyan)">*Affects Estimate</span></label>
+                                <select id="calc-complexity">
+                                    <option value="Commercial/Retail/Residential" selected>Commercial/Retail/Residential Property</option>
+                                    <option value="Civil Infrastructure">Civil Infrastructure (Bridges, Roads)</option>
+                                    <option value="Industrial Facility / Plant">Industrial Facility / Plant</option>
+                                    <option value="Mining (Surface)">Mining (Surface / Open Pit)</option>
+                                    <option value="Mining (Underground)">Mining (Underground)</option>
+                                </select>
+                            </div>
+                            <div class="calc-field-row">
+                                <label for="q-purpose">Primary Purpose of Scan</label>
+                                <select id="q-purpose">
+                                    <option value="As-Built Documentation">As-Built Documentation</option>
+                                    <option value="Scan-to-BIM">Scan-to-BIM (Building Information Modeling)</option>
+                                    <option value="Reverse Engineering">Reverse Engineering</option>
+                                    <option value="Topographical / Volumetric Survey">Topographical / Volumetric Survey</option>
+                                    <option value="Clash Detection (MEP/Structural)">Clash Detection (MEP/Structural)</option>
+                                    <option value="Heritage / Architectural Preservation">Heritage / Architectural Preservation</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="calc-field-row">
+                                <label for="calc-area">Approximate Size (sqm) <span style="color:var(--primary-cyan)">*Affects Estimate</span></label>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <input type="checkbox" id="q-area-unknown" style="width: auto; margin: 0; cursor: pointer;">
+                                        <label for="q-area-unknown" style="font-size: 0.9rem; margin: 0; font-weight: normal; cursor: pointer; color: var(--text-muted);">I don't know the exact size in sqm</label>
+                                    </div>
+                                    <input type="number" id="calc-area" value="500" min="1" step="50" required>
+                                    <select id="calc-area-bucket" style="display: none;">
+                                        <option value="100">Small (e.g. Single room, small apartment, pump station)</option>
+                                        <option value="300" selected>Medium (e.g. Standard home, small retail store)</option>
+                                        <option value="1000">Large (e.g. Multi-story office, large warehouse)</option>
+                                        <option value="5000">Massive (e.g. Entire plant, mining pit)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Logistics, Access & Safety -->
+                        <div class="wizard-panel" id="wizard-step-2">
+                            <p class="calc-panel-label">2. Site Logistics, Access & Safety</p>
+                            <div class="calc-field-row">
+                                <label for="q-access">Site Access Restrictions <span style="color:var(--primary-cyan)">*Affects Estimate</span></label>
+                                <select id="q-access">
+                                    <option value="Standard business hours only">Standard business hours only</option>
+                                    <option value="After-hours / Weekend work required">After-hours / Weekend work required</option>
+                                    <option value="High-security clearance / Escort required">High-security clearance / Escort required</option>
+                                    <option value="Operational plant/mine site">Operational plant/mine site (Simultaneous ops)</option>
+                                </select>
+                            </div>
+                            <div class="calc-field-row">
+                                <label for="q-safety">Specific Safety Requirements</label>
+                                <select id="q-safety">
+                                    <option value="Standard PPE (Hard hat, steel toes, high-vis)">Standard PPE (Hard hat, steel toes, high-vis)</option>
+                                    <option value="Specialized safety induction required">Specialized safety induction required</option>
+                                    <option value="Confined space entry">Confined space entry</option>
+                                    <option value="Working at heights">Working at heights</option>
+                                    <option value="Underground mining safety protocols">Underground mining safety protocols</option>
+                                </select>
+                            </div>
+                            <div class="calc-field-row">
+                                <label for="q-power">Adequate lighting and power available?</label>
+                                <select id="q-power">
+                                    <option value="Yes, fully powered and lit">Yes, fully powered and lit</option>
+                                    <option value="No, need supplementary lighting/battery packs">No, need supplementary lighting/battery packs</option>
+                                </select>
+                            </div>
+                            <div class="calc-field-row" style="display:flex; gap:10px;">
+                                <div style="flex:1">
+                                    <label for="q-date-mob">Target Mobilization</label>
+                                    <input type="date" id="q-date-mob" required>
+                                </div>
+                                <div style="flex:1">
+                                    <label for="q-date-due">Deadline</label>
+                                    <input type="date" id="q-date-due" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Accuracy & Survey Control -->
+                        <div class="wizard-panel" id="wizard-step-3">
+                            <p class="calc-panel-label">3. Accuracy & Survey Control</p>
+                            <div class="calc-field-row">
+                                <label for="q-accuracy">Required Level of Accuracy <span style="color:var(--primary-cyan)">*Affects Estimate</span></label>
+                                <select id="q-accuracy">
+                                    <option value="Standard">Standard (Â± 10mm to 15mm)</option>
+                                    <option value="High Precision">High Precision (Â± 2mm to 5mm)</option>
+                                </select>
+                            </div>
+                            <div class="calc-field-row">
+                                <label for="q-control">Survey Coordination</label>
+                                <select id="q-control">
+                                    <option value="Local site grid / Arbitrary coordinates">Local site grid / Arbitrary coordinates</option>
+                                    <option value="National coordinate system">National coordinate system</option>
+                                    <option value="Tie into existing survey control points provided by client">Tie into existing survey control points provided by client</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Final Deliverables -->
+                        <div class="wizard-panel" id="wizard-step-4">
+                            <p class="calc-panel-label">4. Final Deliverables</p>
+                            <div class="calc-field-row" style="margin-bottom: 20px;">
+                                <label>File Format / Base Deliverable <span style="color:var(--primary-cyan)">*Affects Estimate</span></label>
+                                <div class="calc-deliv-grid" id="calc-deliv-grid">
+                                    <!-- Injected via JS -->
+                                </div>
+                            </div>
+                            
+                            <div class="calc-field-row" id="bim-level-row" style="display:none;">
+                                <label for="q-bim-level">BIM Level of Development (LOD) <span style="color:var(--primary-cyan)">*Affects Estimate</span></label>
+                                <select id="q-bim-level">
+                                    <option value="100">LOD 100: Conceptual (Massing, basic shapes)</option>
+                                    <option value="200">LOD 200: Approximate geometry (Generic elements)</option>
+                                    <option value="300" selected>LOD 300: Precise geometry (Specific systems)</option>
+                                    <option value="400">LOD 400+: Fabrication level (Highly detailed)</option>
+                                </select>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px; line-height: 1.4;">
+                                    <strong>Note:</strong> LOD applies only to BIM Models. <strong>LOD 100/200</strong> is best for basic spatial planning. <strong>LOD 300/400</strong> provides highly detailed, precise geometry for engineering and fabrication.
+                                </p>
+                            </div>
+
+                            <div class="calc-field-row">
+                                <label for="q-systems">Elements to be Modeled</label>
+                                <select id="q-systems">
+                                    <option value="Architectural (Walls, doors, windows, floors, ceilings)">Architectural (Walls, doors, windows, floors, ceilings)</option>
+                                    <option value="Structural (Beams, columns, load-bearing elements)">Structural (Beams, columns, load-bearing elements)</option>
+                                    <option value="MEP (Mechanical, Electrical, Plumbing)">MEP (Mechanical, Electrical, Plumbing)</option>
+                                    <option value="Site/Topography (Terrain, landscaping, exterior flatwork)">Site/Topography (Terrain, landscaping, exterior flatwork)</option>
+                                    <option value="Full Architectural + Structural + MEP">Full Architectural + Structural + MEP</option>
+                                </select>
+                            </div>
+
+                            <div class="calc-field-row">
+                                <label for="q-reference">Reference Link</label>
+                                <input type="url" id="q-reference" placeholder="e.g. Google Drive / Dropbox / WeTransfer link">
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">*If you have local files (plans, photos), you can attach them directly to the email draft generated in the next step.</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 5: Project Details -->
+                        <div class="wizard-panel" id="wizard-step-5">
+                            <p class="calc-panel-label">5. Client & Project Overview</p>
+                            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">Please provide your contact details to receive your automated scoping estimate.</p>
+                            <div class="calc-field-row">
+                                <label for="q-company">Company Name</label>
+                                <input type="text" id="q-company" placeholder="e.g. Acme Architects" required>
+                            </div>
+                            <div class="calc-field-row">
+                                <label for="q-contact">Primary Contact Person</label>
+                                <input type="text" id="q-contact" placeholder="e.g. Jane Doe" required>
+                            </div>
+                            <div class="calc-field-row">
+                                <label for="q-phone">Phone Number</label>
+                                <input type="tel" id="q-phone" placeholder="e.g. +27 82 733 6873" required>
+                            </div>
+                            <div class="calc-field-row">
+                                <label for="q-email">Email Address</label>
+                                <input type="email" id="q-email" placeholder="your@email.com" required>
+                            </div>
+                            <div class="calc-field-row">
+                                <label for="q-project">Project Name/Reference</label>
+                                <input type="text" id="q-project" placeholder="e.g. 101 Main St Renovation" required>
+                            </div>
+                            <div class="calc-field-row">
+                                <label for="q-location">Site Location (Address/Coordinates)</label>
+                                <input type="text" id="q-location" placeholder="Site address for travel budgeting" required>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="wizard-nav">
+                        <button class="wizard-btn-prev" id="wizard-prev" style="display:none;">Back</button>
+                        <button class="wizard-btn-next" id="wizard-next">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- RIGHT: readout -->
+                <div class="calc-readout">
+                    <div class="calc-readout-scene" id="calc-readout-scene">
+                        <svg id="calc-dot-field" viewBox="0 0 400 220" preserveAspectRatio="none"></svg>
+                        <div class="calc-scanline" id="calc-scanline"></div>
+                        <p class="calc-readout-label">Step 1 of 5</p>
+                        <div class="calc-readout-total" id="calc-total-display" style="font-size: 2rem;">Analyzing project scope & environment...</div>
+                        <div class="calc-readout-mode" id="calc-mode-summary"></div>
+                    </div>
+                    <div class="calc-breakdown" id="calc-breakdown"></div>
+                    
+                    <p class="calc-disclaimer">Estimate will be sent instantly to your provided email address. Final pricing may vary with site access, occlusion, and turnaround requirements.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bottom of Funnel CTA -->
+    
+
+    <section class="bottom-cta" style="background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(41, 121, 255, 0.1)); padding: 6rem 0; text-align: center; border-top: 1px solid var(--glass-border);">
+        <div class="container">
+            <h2 style="font-size: 3rem; margin-bottom: 1.5rem; color: var(--text-main);">Ready to Discuss Your Next Project?</h2>
+            <p style="font-size: 1.2rem; color: var(--text-muted); max-width: 700px; margin: 0 auto 3rem; text-align: center;">Get an exact quote based on your site complexity, required tolerances, and deliverables.</p>
+                        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                <a href="/contact.html#estimator" class="cta-btn">Request an Instant Estimate</a>
+                <a href="tel:+27827336873" class="cta-btn-secondary"><i class="ph ph-phone"></i> Call a Technical Expert</a>
+            </div>
+            <div style="margin-top: 1.5rem;">
+                <a href="mailto:isaiah@3dscanmetrics.co.za?subject=Request for Proposal" style="color: var(--primary-cyan); text-decoration: none; font-size: 1rem; display: inline-flex; align-items: center; gap: 0.5rem; transition: opacity 0.3s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"><i class="ph ph-paperclip" style="font-size: 1.2rem;"></i> Have an RFP or floor plans? Email us directly.</a>
+            </div>
+            
+            <div class="micro-trust" style="margin-top: 3rem; text-align: center;">
+                <p style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 1rem;">Trusted by Top AEC Firms across South Africa</p>
+                <div style="display: flex; justify-content: center; gap: 2rem; opacity: 0.6; font-size: 1.5rem;">
+                    <i class="ph ph-buildings" title="Architecture"></i>
+                    <i class="ph ph-factory" title="Industrial"></i>
+                    <i class="ph ph-hard-hat" title="Construction"></i>
+                    <i class="ph ph-bridge" title="Civil"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Full Width Pre-Footer Banner -->
+    <div class="cyan-banner">
+        <span class="banner-part">Capture Reality. Build with Confidence.</span>
+        <span class="banner-divider" style="opacity: 0.5; margin: 0 10px;">|</span> 
+        <span class="banner-part">Advanced 3D Scanning</span>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-col" style="flex: 2; min-width: 250px;">
+                    <a href="/" class="logo" style="margin-bottom: 1rem;">
+                        <i class="ph ph-cube-transparent" style="color: var(--primary-cyan);"></i>
+                        3D Scan <span>Metrics</span>
+                    </a>
+                    <p style="max-width: 300px;">Providing state-of-the-art 3D laser scanning services across South Africa. Your partner in digital transformation.</p>
+                </div>
+                <div class="footer-col" style="flex: 1; min-width: 150px;">
+                    <h4>Services</h4>
+                    <a href="/services/reverse-engineering">Reverse Engineering</a>
+                    <a href="/services/3d-laser-scanning">3D Laser Scanning</a>
+                    <a href="/services/quality-inspection">Quality Inspection</a>
+                    <a href="/services/scan-to-bim">Scan to BIM</a>
+                </div>
+                <div class="footer-col" style="flex: 1; min-width: 150px;">
+                                                            <h4>Locations</h4>
+                    <a href="/locations/3d-laser-scanning-johannesburg">Johannesburg</a>
+                    <a href="/locations/3d-laser-scanning-pretoria">Pretoria</a>
+                    <a href="/locations/3d-laser-scanning-cape-town">Cape Town</a>
+                    <a href="/locations">All Locations</a>
+                </div>
+                <div class="footer-col" style="flex: 1; min-width: 150px;">
+                    <h4>Contact Us</h4>
+                    <a href="mailto:isaiah@3dscanmetrics.co.za"><i class="ph ph-envelope-simple"></i> isaiah@3dscanmetrics.co.za</a>
+                    <a href="https://share.google/IEGiLeAnZE8ez7C2m" target="_blank" rel="noopener noreferrer" style="color: var(--primary-cyan);"><i class="ph-fill ph-google-logo"></i> View our Google Profile</a>
+                    <a href="#"><i class="ph ph-phone"></i> +27 82 733 6873</a>
+                    <a href="#"><i class="ph ph-map-pin"></i> Johannesburg, South Africa</a>
+                </div>
+            </div>
+            <div class="footer-bottom" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <p>&copy; 2026 3D Scan Metrics. All rights reserved.</p>
+                <div class="partner-links" style="font-size: 0.9rem; color: var(--text-muted);">
+                    <span style="opacity: 0.7; margin-right: 0.5rem;">Partner Network:</span>
+                    <a href="https://www.freelancegeomatics.com" target="_blank" rel="noopener noreferrer" style="color: var(--primary-cyan); text-decoration: none; margin-right: 1rem; transition: opacity 0.3s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">Freelance Geomatics</a>
+                    <a href="https://www.gprmetrics.co.za" target="_blank" rel="noopener noreferrer" style="color: var(--primary-cyan); text-decoration: none; transition: opacity 0.3s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">GPR Metrics</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <script src="/script.js" defer></script>
+</body>
+</html>

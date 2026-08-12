@@ -1,0 +1,45 @@
+{
+  "name": "metricscrm",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^2.16.0",
+    "@opennextjs/cloudflare": "^1.16.0",
+    "date-fns": "^4.4.0",
+    "imap-simple": "^5.1.0",
+    "lucide-react": "^1.29.0",
+    "mailparser": "^3.9.14",
+    "next": "16.3.0",
+    "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.19.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "resend": "^6.18.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260811.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/imap-simple": "^4.2.10",
+    "@types/mailparser": "^3.4.6",
+    "@types/node": "^20",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/pdfkit": "^0.17.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.10",
+    "typescript": "^5",
+    "wrangler": "^4.45.0"
+  }
+}
