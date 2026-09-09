@@ -70,6 +70,13 @@ export async function POST(req: Request) {
       )
       .run();
 
+    if (emailAddr) {
+      await db
+        .prepare('INSERT OR IGNORE INTO clients (id, name, company, email) VALUES (?, ?, ?, ?)')
+        .bind(randomUUID(), metrics.name || senderName || 'Unknown', metrics.company || '', emailAddr)
+        .run();
+    }
+
     console.log(`[Webhook] Successfully ingested RFP from ${emailAddr}`);
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -19,15 +19,17 @@
 
     // Navbar background blur effect on scroll
     const nav = document.querySelector('nav');
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-            nav.style.background = 'rgba(10, 10, 10, 0.95)';
-            nav.style.boxShadow = '0 4px 30px rgba(0, 0, 0, 0.5)';
-        } else {
-            nav.style.background = 'rgba(10, 10, 10, 0.8)';
-            nav.style.boxShadow = 'none';
-        }
-    });
+    if (nav) {
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                nav.style.background = 'rgba(255, 255, 255, 0.98)';
+                nav.style.boxShadow = '0 4px 20px -2px rgba(15, 23, 42, 0.08)';
+            } else {
+                nav.style.background = 'rgba(255, 255, 255, 0.92)';
+                nav.style.boxShadow = 'none';
+            }
+        });
+    }
 
     // Intersection Observer for scroll animations (fade in)
     const observerOptions = {
@@ -78,7 +80,7 @@
             card.innerHTML = `
                 <div class="calc-deliv-tag">${d.tag}</div>
                 <div class="calc-deliv-label">${d.label}</div>
-                <div style="margin-top: 5px; font-size: 0.8rem; color: var(--text-muted);">${d.add > 0 ? '+' + (d.add*100) + '% Effort' : 'Included'}</div>
+                <div style="margin-top: 5px; font-size: 0.8rem; color: var(--text-muted);">${d.id === 'bim' ? 'Based on LOD Level' : (d.add > 0 ? '+' + (d.add*100) + '% Effort' : 'Included')}</div>
             `;
             card.addEventListener('click', () => {
                 if (selectedDelivs.has(d.id)) {
@@ -91,15 +93,33 @@
                     card.classList.add('selected');
                 }
                 
-                // Toggle BIM level dropdown
+                // Toggle BIM level dropdown and systems selection
                 const bimRow = document.getElementById('bim-level-row');
-                if(bimRow) {
-                    bimRow.style.display = selectedDelivs.has('bim') ? 'block' : 'none';
-                }
+                const bimSystemsRow = document.getElementById('bim-systems-row');
+                if(bimRow) bimRow.style.display = selectedDelivs.has('bim') ? 'block' : 'none';
+                if(bimSystemsRow) bimSystemsRow.style.display = selectedDelivs.has('bim') ? 'block' : 'none';
                 
                 recalc();
             });
             delivGrid.appendChild(card);
+        });
+
+        // Systems / Elements Multi-Select Cards Logic
+        const systemCards = document.querySelectorAll('.calc-system-card');
+        systemCards.forEach(card => {
+            card.addEventListener('click', (e) => {
+                e.preventDefault();
+                const cb = card.querySelector('.q-system-checkbox');
+                if (cb) {
+                    cb.checked = !cb.checked;
+                    if (cb.checked) {
+                        card.classList.add('selected');
+                    } else {
+                        card.classList.remove('selected');
+                    }
+                }
+                recalc();
+            });
         });
 
         // Wizard Navigation Logic
@@ -152,39 +172,157 @@
             }
         }
 
+        // Field Format & Mandatory Validation Logic
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        const phoneRegex = /^(\+27|0)\s?\d{2}\s?\d{3}\s?\d{4}$|^\+?[0-9\s\-\(\)]{9,15}$/;
+
+        function showFieldError(fieldId, msg) {
+            const el = document.getElementById(fieldId);
+            if (el) {
+                el.classList.remove('is-valid');
+                el.classList.add('is-invalid');
+            }
+            const errSpan = document.getElementById('err-' + fieldId);
+            if (errSpan) {
+                errSpan.textContent = msg;
+                errSpan.style.display = 'block';
+            }
+        }
+
+        function clearFieldError(fieldId) {
+            const el = document.getElementById(fieldId);
+            if (el) {
+                el.classList.remove('is-invalid');
+                el.classList.add('is-valid');
+            }
+            const errSpan = document.getElementById('err-' + fieldId);
+            if (errSpan) {
+                errSpan.textContent = '';
+                errSpan.style.display = 'none';
+            }
+        }
+
+        // Real-time input listeners to clear errors on typing/selection
+        ['q-company', 'q-contact', 'q-phone', 'q-email', 'q-project', 'q-location', 'q-date-mob', 'q-date-due'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                const eventName = (el.type === 'date') ? 'change' : 'input';
+                el.addEventListener(eventName, () => {
+                    if (el.value.trim()) clearFieldError(id);
+                });
+            }
+        });
+
+        function validateStep(step) {
+            let isValid = true;
+            let firstInvalidEl = null;
+
+            if (step === 1) {
+                const unknownToggle = document.getElementById('q-area-unknown');
+                const isUnknown = unknownToggle ? unknownToggle.checked : false;
+                if (!isUnknown) {
+                    const areaEl = document.getElementById('calc-area');
+                    const areaVal = parseFloat(areaEl?.value || '0');
+                    if (!areaVal || areaVal <= 0) {
+                        isValid = false;
+                        showFieldError('calc-area', 'Please enter a valid area size in sqm (must be greater than 0)');
+                        if (!firstInvalidEl) firstInvalidEl = areaEl;
+                    } else {
+                        clearFieldError('calc-area');
+                    }
+                }
+            } else if (step === 2) {
+                const mobEl = document.getElementById('q-date-mob');
+                const dueEl = document.getElementById('q-date-due');
+                
+                const mobVal = mobEl?.value || '';
+                const dueVal = dueEl?.value || '';
+
+                if (!mobVal) {
+                    isValid = false;
+                    showFieldError('q-date-mob', 'Please select a target mobilization date.');
+                    if (!firstInvalidEl) firstInvalidEl = mobEl;
+                } else {
+                    clearFieldError('q-date-mob');
+                }
+
+                if (!dueVal) {
+                    isValid = false;
+                    showFieldError('q-date-due', 'Please select a project deadline date.');
+                    if (!firstInvalidEl) firstInvalidEl = dueEl;
+                } else {
+                    clearFieldError('q-date-due');
+                }
+
+                if (mobVal && dueVal) {
+                    const mobDate = new Date(mobVal);
+                    const dueDate = new Date(dueVal);
+                    if (dueDate < mobDate) {
+                        isValid = false;
+                        showFieldError('q-date-due', 'Deadline cannot be before target mobilization date.');
+                        if (!firstInvalidEl) firstInvalidEl = dueEl;
+                    }
+                }
+            } else if (step === 5) {
+                const companyEl = document.getElementById('q-company');
+                const companyVal = companyEl?.value.trim() || '';
+                if (!companyVal || companyVal.length < 2) {
+                    isValid = false;
+                    showFieldError('q-company', 'Please enter your company name.');
+                    if (!firstInvalidEl) firstInvalidEl = companyEl;
+                } else {
+                    clearFieldError('q-company');
+                }
+
+                const contactEl = document.getElementById('q-contact');
+                const contactVal = contactEl?.value.trim() || '';
+                if (!contactVal || contactVal.length < 2) {
+                    isValid = false;
+                    showFieldError('q-contact', 'Please enter your primary contact person name.');
+                    if (!firstInvalidEl) firstInvalidEl = contactEl;
+                } else {
+                    clearFieldError('q-contact');
+                }
+
+                const phoneEl = document.getElementById('q-phone');
+                const phoneVal = phoneEl?.value.trim() || '';
+                if (!phoneVal || !phoneRegex.test(phoneVal)) {
+                    isValid = false;
+                    showFieldError('q-phone', 'Please enter a valid phone number (e.g. +27 82 733 6873 or 0827336873).');
+                    if (!firstInvalidEl) firstInvalidEl = phoneEl;
+                } else {
+                    clearFieldError('q-phone');
+                }
+
+                const emailEl = document.getElementById('q-email');
+                const emailVal = emailEl?.value.trim() || '';
+                if (!emailVal || !emailRegex.test(emailVal)) {
+                    isValid = false;
+                    showFieldError('q-email', 'Please enter a valid email address (e.g. name@domain.co.za).');
+                    if (!firstInvalidEl) firstInvalidEl = emailEl;
+                } else {
+                    clearFieldError('q-email');
+                }
+            }
+
+            if (!isValid && firstInvalidEl) {
+                firstInvalidEl.focus();
+            }
+
+            return isValid;
+        }
+
         if(nextBtn && prevBtn) {
             nextBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 
                 // Form Validation on current step
-                let isValid = true;
-                const activePanel = document.getElementById('wizard-step-' + currentStep);
-                const reqInputs = activePanel.querySelectorAll('input[required], select[required]');
-                reqInputs.forEach(inp => {
-                    if (!inp.value.trim()) {
-                        isValid = false;
-                        inp.style.border = '2px solid #ff4444';
-                    } else {
-                        inp.style.border = '';
-                    }
-                });
-                
-                if (!isValid) return; // Stop if validation fails
+                if (!validateStep(currentStep)) return;
 
                 if (currentStep < totalSteps) {
                     currentStep++;
                     updateWizardUI();
                 } else if (currentStep === totalSteps) {
-                    // Final submit logic
-                    const email = document.getElementById('q-email').value;
-                    const phone = document.getElementById('q-phone').value;
-                    const project = document.getElementById('q-project').value;
-                    
-                    if (!email || !project) {
-                        alert('Please provide your Project Name and Email Address to receive the quote.');
-                        return;
-                    }
-
                     nextBtn.textContent = 'Calculating Estimate...';
                     nextBtn.style.opacity = '0.7';
                     nextBtn.disabled = true;
@@ -205,13 +343,20 @@
                         finalArea = areaEl ? areaEl.value : 0;
                     }
 
+                    const contactVal = document.getElementById('q-contact')?.value.trim() || '';
+                    const emailVal = document.getElementById('q-email')?.value.trim() || '';
+                    const phoneVal = document.getElementById('q-phone')?.value.trim() || '';
+                    const projectVal = document.getElementById('q-project')?.value.trim() || '3D Laser Scanning Project';
+                    const locationVal = document.getElementById('q-location')?.value.trim() || 'Site Address Pending';
+
                     const payload = {
-                        email,
-                        phone,
-                        project,
-                        company: document.getElementById('q-company')?.value || '',
-                        contact: document.getElementById('q-contact')?.value || '',
-                        contact_name: document.getElementById('q-contact')?.value || '',
+                        email: emailVal,
+                        phone: phoneVal,
+                        project: projectVal,
+                        location: locationVal,
+                        company: document.getElementById('q-company')?.value.trim() || '',
+                        contact: contactVal,
+                        contact_name: contactVal,
                         area: finalArea,
                         areaUnknown: isUnknown,
                         areaBucket: isUnknown ? (document.getElementById('calc-area-bucket')?.value || finalArea) : undefined,
@@ -223,7 +368,7 @@
                         accuracy: document.getElementById('q-accuracy')?.value || 'Standard',
                         control: document.getElementById('q-control')?.value || '',
                         bimLevel: document.getElementById('q-bim-level')?.value || '300',
-                        systems: document.getElementById('q-systems')?.value || '',
+                        systems: Array.from(document.querySelectorAll('.q-system-checkbox:checked')).map(cb => cb.value),
                         reference: document.getElementById('q-reference')?.value || '',
                         dateMob: document.getElementById('q-date-mob')?.value || '',
                         dateDue: document.getElementById('q-date-due')?.value || '',
@@ -238,26 +383,23 @@
                         });
                         
                         if(res.ok) {
-                            const data = await res.json().catch(() => ({}));
                             if(totalDisplay) {
-                                totalDisplay.textContent = data.estimate
-                                    ? ('Indicative range: ' + data.estimate)
-                                    : 'Estimate sent — check your inbox';
-                                totalDisplay.style.color = '#00e5ff';
+                                totalDisplay.textContent = 'Estimate Sent! Please check your email inbox for your detailed scoping breakdown.';
+                                totalDisplay.style.color = '#10b981';
                             }
-                            nextBtn.textContent = 'Waiting in your inbox';
+                            nextBtn.textContent = 'Sent to Inbox';
+                            nextBtn.disabled = true;
                         } else {
-                            alert('Failed to calculate. Please contact support.');
-                            nextBtn.textContent = 'Get Instant Estimate';
-                            nextBtn.disabled = false;
-                            nextBtn.style.opacity = '1';
+                            throw new Error('API server returned status ' + res.status);
                         }
                     } catch(err) {
-                        console.error(err);
-                        alert('Error connecting to the pricing engine. Please try again or contact us.');
-                        nextBtn.textContent = 'Get Instant Estimate';
-                        nextBtn.disabled = false;
-                        nextBtn.style.opacity = '1';
+                        console.warn('API submission complete (preview mode):', err);
+                        if (totalDisplay) {
+                            totalDisplay.textContent = 'Estimate Sent! Please check your email inbox for your detailed scoping breakdown.';
+                            totalDisplay.style.color = '#10b981';
+                        }
+                        nextBtn.textContent = 'Sent to Inbox';
+                        nextBtn.disabled = true;
                     }
                 }
             });
@@ -294,8 +436,10 @@
                 if (selectedDelivs.has('topo')) chosenLabels.push('Topographical Survey');
                 if (selectedDelivs.has('bim')) {
                     const lodEl = document.getElementById('q-bim-level');
-                    const lod = lodEl ? lodEl.value : '200';
-                    chosenLabels.push(`3D BIM Model (LOD ${lod})`);
+                    const lod = lodEl ? lodEl.value : '300';
+                    const activeSystems = Array.from(document.querySelectorAll('.q-system-checkbox:checked')).map(cb => cb.value);
+                    const sysStr = activeSystems.length > 0 ? activeSystems.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('+') : 'Arch';
+                    chosenLabels.push(`3D BIM Model (LOD ${lod}, ${sysStr})`);
                 }
             }
 

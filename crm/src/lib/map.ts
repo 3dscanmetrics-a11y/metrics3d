@@ -37,7 +37,9 @@ export function mapLead(row: Record<string, unknown> | null): MappedLead | null 
 
   let payload: Record<string, unknown> = {};
   try {
-    payload = JSON.parse(String(row.payload_json || row.payload || '{}')) || {};
+    const rawVal = row.payload_json || row.payload || row.deliverables;
+    const parsed = JSON.parse(String(rawVal || '{}'));
+    payload = (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) ? parsed : {};
   } catch {
     payload = {};
   }

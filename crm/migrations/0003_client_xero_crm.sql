@@ -1,0 +1,22 @@
+-- Migration 0003: Xero-Grade Enterprise Client Fields
+ALTER TABLE clients ADD COLUMN account_number TEXT;
+ALTER TABLE clients ADD COLUMN client_type TEXT DEFAULT 'Company';
+ALTER TABLE clients ADD COLUMN mobile TEXT;
+ALTER TABLE clients ADD COLUMN website TEXT;
+ALTER TABLE clients ADD COLUMN registration_number TEXT;
+ALTER TABLE clients ADD COLUMN vat_number TEXT;
+ALTER TABLE clients ADD COLUMN currency TEXT DEFAULT 'ZAR';
+ALTER TABLE clients ADD COLUMN payment_terms TEXT DEFAULT '30 Days';
+ALTER TABLE clients ADD COLUMN discount_percent REAL DEFAULT 0.0;
+ALTER TABLE clients ADD COLUMN billing_street TEXT;
+ALTER TABLE clients ADD COLUMN billing_city TEXT;
+ALTER TABLE clients ADD COLUMN billing_state TEXT;
+ALTER TABLE clients ADD COLUMN billing_postal_code TEXT;
+ALTER TABLE clients ADD COLUMN billing_country TEXT DEFAULT 'South Africa';
+ALTER TABLE clients ADD COLUMN postal_street TEXT;
+ALTER TABLE clients ADD COLUMN postal_city TEXT;
+ALTER TABLE clients ADD COLUMN postal_state TEXT;
+ALTER TABLE clients ADD COLUMN postal_postal_code TEXT;
+ALTER TABLE clients ADD COLUMN postal_country TEXT DEFAULT 'South Africa';
+ALTER TABLE clients ADD COLUMN industry TEXT;
+ALTER TABLE clients ADD COLUMN notes TEXT;

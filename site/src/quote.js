@@ -50,6 +50,7 @@ export async function handleQuote(request, env, ctx) {
       access: body.access,
       accuracy: body.accuracy,
       bimLevel: body.bimLevel || body.lod,
+      systems: body.systems,
       areaUnknown: Boolean(body.areaUnknown),
       areaBucket: body.areaBucket || (body.areaUnknown ? area : undefined),
     });

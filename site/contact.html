@@ -13,7 +13,7 @@
     <!-- Navbar -->
                     <nav>
             <a href="/" class="logo" aria-label="3D Scan Metrics Home">
-                <i class="ph ph-cube-transparent" style="color: var(--primary-cyan);"></i>
+                <img src="/logo.png" alt="3D Scan Metrics Logo" class="logo-img">
                 3D Scan <span>Metrics</span>
             </a>
             <div class="mobile-menu-toggle" id="mobile-menu-toggle">
@@ -62,7 +62,7 @@
                     </div>
                 </div>
                 <div class="hero-image">
-                    <img src="https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=format&fit=crop&q=80&w=800" alt="Contact 3D Scan Metrics South Africa">
+                    <img src="/assets/images/contact_hero.jpg" alt="Contact 3D Scan Metrics South Africa">
                 </div>
             </div>
         </div>
@@ -73,8 +73,8 @@
 <section class="calculator" id="estimator">
         <div class="container">
             <h2>Get Your Rough Estimate in Seconds</h2>
-            <p style="max-width: 650px; margin: 0 auto 1rem;">Skip the back-and-forth. Configure your site details below and our pricing engine will instantly generate an <strong>indicative price range</strong> — not a formal quotation.</p>
-            <p style="text-align: center; margin-bottom: 3rem;"><a href="mailto:isaiah@3dscanmetrics.co.za?subject=Request for Proposal" style="color: var(--primary-cyan); text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;"><i class="ph ph-paperclip"></i> Have an official RFP? Email us your documents directly.</a></p>
+            <p style="max-width: 650px; margin: 0 auto 1rem;">Skip the wait. Try our Instant Cost Estimator below to get your pricing immediately.</p>
+            <p style="text-align: center; margin-bottom: 3rem;"><a href="mailto:isaiah@3dscanmetrics.co.za" style="color: var(--primary-cyan); text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;"><i class="ph ph-envelope-simple"></i> Need custom help? Reach out at isaiah@3dscanmetrics.co.za.</a></p>
             
             <div class="calc-grid">
                 <!-- LEFT: controls -->
@@ -162,12 +162,14 @@
                             </div>
                             <div class="calc-field-row calc-dates" style="display:flex; gap:10px;">
                                 <div style="flex:1">
-                                    <label for="q-date-mob">Target Mobilization</label>
+                                    <label for="q-date-mob">Target Mobilization <span class="req-star">*</span></label>
                                     <input type="date" id="q-date-mob" required>
+                                    <span class="field-error-msg" id="err-q-date-mob" style="display:none;"></span>
                                 </div>
                                 <div style="flex:1">
-                                    <label for="q-date-due">Deadline</label>
+                                    <label for="q-date-due">Deadline <span class="req-star">*</span></label>
                                     <input type="date" id="q-date-due" required>
+                                    <span class="field-error-msg" id="err-q-date-due" style="display:none;"></span>
                                 </div>
                             </div>
                         </div>
@@ -215,15 +217,34 @@
                                 </p>
                             </div>
 
-                            <div class="calc-field-row">
-                                <label for="q-systems">Elements to be Modeled</label>
-                                <select id="q-systems">
-                                    <option value="Architectural (Walls, doors, windows, floors, ceilings)">Architectural (Walls, doors, windows, floors, ceilings)</option>
-                                    <option value="Structural (Beams, columns, load-bearing elements)">Structural (Beams, columns, load-bearing elements)</option>
-                                    <option value="MEP (Mechanical, Electrical, Plumbing)">MEP (Mechanical, Electrical, Plumbing)</option>
-                                    <option value="Site/Topography (Terrain, landscaping, exterior flatwork)">Site/Topography (Terrain, landscaping, exterior flatwork)</option>
-                                    <option value="Full Architectural + Structural + MEP">Full Architectural + Structural + MEP</option>
-                                </select>
+                            <div class="calc-field-row" id="bim-systems-row" style="display:none;">
+                                <label>Elements to be Modeled <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Multi-select)</span></label>
+                                <div class="calc-systems-grid">
+                                    <div class="calc-system-card selected" data-system="architectural">
+                                        <input type="checkbox" class="q-system-checkbox" value="architectural" checked style="display:none;">
+                                        <div class="calc-system-badge">Included</div>
+                                        <div class="calc-system-title">Architectural</div>
+                                        <div class="calc-system-desc">Walls, doors, windows, floors, ceilings, stairs</div>
+                                    </div>
+                                    <div class="calc-system-card" data-system="structural">
+                                        <input type="checkbox" class="q-system-checkbox" value="structural" style="display:none;">
+                                        <div class="calc-system-badge">+25% Effort</div>
+                                        <div class="calc-system-title">Structural</div>
+                                        <div class="calc-system-desc">Beams, columns, trusses, foundations</div>
+                                    </div>
+                                    <div class="calc-system-card" data-system="mep">
+                                        <input type="checkbox" class="q-system-checkbox" value="mep" style="display:none;">
+                                        <div class="calc-system-badge">+45% Effort</div>
+                                        <div class="calc-system-title">MEP Services</div>
+                                        <div class="calc-system-desc">HVAC ducts, electrical, piping, conduit</div>
+                                    </div>
+                                    <div class="calc-system-card" data-system="site">
+                                        <input type="checkbox" class="q-system-checkbox" value="site" style="display:none;">
+                                        <div class="calc-system-badge">+15% Effort</div>
+                                        <div class="calc-system-title">Site / Civil</div>
+                                        <div class="calc-system-desc">Topography, exterior paving, retaining walls</div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="calc-field-row">
@@ -238,28 +259,34 @@
                             <p class="calc-panel-label">5. Client & Project Overview</p>
                             <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">Please provide your contact details to receive your automated scoping estimate.</p>
                             <div class="calc-field-row">
-                                <label for="q-company">Company Name</label>
+                                <label for="q-company">Company Name <span class="req-star">*</span></label>
                                 <input type="text" id="q-company" placeholder="e.g. Acme Architects" required>
+                                <span class="field-error-msg" id="err-q-company" style="display:none;"></span>
                             </div>
                             <div class="calc-field-row">
-                                <label for="q-contact">Primary Contact Person</label>
+                                <label for="q-contact">Primary Contact Person <span class="req-star">*</span></label>
                                 <input type="text" id="q-contact" placeholder="e.g. Jane Doe" required>
+                                <span class="field-error-msg" id="err-q-contact" style="display:none;"></span>
                             </div>
                             <div class="calc-field-row">
-                                <label for="q-phone">Phone Number</label>
+                                <label for="q-phone">Phone Number <span class="req-star">*</span></label>
                                 <input type="tel" id="q-phone" placeholder="e.g. +27 82 733 6873" required>
+                                <span class="field-error-msg" id="err-q-phone" style="display:none;"></span>
                             </div>
                             <div class="calc-field-row">
-                                <label for="q-email">Email Address</label>
+                                <label for="q-email">Email Address <span class="req-star">*</span></label>
                                 <input type="email" id="q-email" placeholder="your@email.com" required>
+                                <span class="field-error-msg" id="err-q-email" style="display:none;"></span>
                             </div>
                             <div class="calc-field-row">
-                                <label for="q-project">Project Name/Reference</label>
-                                <input type="text" id="q-project" placeholder="e.g. 101 Main St Renovation" required>
+                                <label for="q-project">Project Name/Reference <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Optional)</span></label>
+                                <input type="text" id="q-project" placeholder="e.g. 101 Main St Renovation">
+                                <span class="field-error-msg" id="err-q-project" style="display:none;"></span>
                             </div>
                             <div class="calc-field-row">
-                                <label for="q-location">Site Location (Address/Coordinates)</label>
-                                <input type="text" id="q-location" placeholder="Site address for travel budgeting" required>
+                                <label for="q-location">Site Location (Address/Coordinates) <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Optional)</span></label>
+                                <input type="text" id="q-location" placeholder="Site address for travel budgeting">
+                                <span class="field-error-msg" id="err-q-location" style="display:none;"></span>
                             </div>
                         </div>
                     </form>
@@ -303,12 +330,24 @@
             </div>
             
             <div class="micro-trust" style="margin-top: 3rem; text-align: center;">
-                <p style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 1rem;">Trusted by Top AEC Firms across South Africa</p>
-                <div style="display: flex; justify-content: center; gap: 2rem; opacity: 0.6; font-size: 1.5rem;">
-                    <i class="ph ph-buildings" title="Architecture"></i>
-                    <i class="ph ph-factory" title="Industrial"></i>
-                    <i class="ph ph-hard-hat" title="Construction"></i>
-                    <i class="ph ph-bridge" title="Civil"></i>
+                <p style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 1.25rem;">Trusted by Top AEC & Mining Firms Across South Africa</p>
+                <div class="client-slider-wrapper">
+                    <div class="client-logos-track">
+                        <div class="client-logo-badge"><img src="/assets/clients/anglo.png" alt="Anglo American" title="Anglo American"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/eskom.png" alt="Eskom" title="Eskom"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/omnia.png" alt="Omnia" title="Omnia"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/wilmar.png" alt="Wilmar" title="Wilmar"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/bmsa.png" alt="BMSA" title="BMSA"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/frys-metal.png" alt="FRYS Metal" title="FRYS Metal"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/santasalo.png" alt="Santasalo" title="Santasalo"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/anglo.png" alt="Anglo American" title="Anglo American"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/eskom.png" alt="Eskom" title="Eskom"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/omnia.png" alt="Omnia" title="Omnia"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/wilmar.png" alt="Wilmar" title="Wilmar"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/bmsa.png" alt="BMSA" title="BMSA"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/frys-metal.png" alt="FRYS Metal" title="FRYS Metal"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/santasalo.png" alt="Santasalo" title="Santasalo"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -326,7 +365,7 @@
             <div class="footer-content">
                 <div class="footer-col" style="flex: 2; min-width: 250px;">
                     <a href="/" class="logo" style="margin-bottom: 1rem;">
-                        <i class="ph ph-cube-transparent" style="color: var(--primary-cyan);"></i>
+                        <img src="/logo.png" alt="3D Scan Metrics Logo" class="logo-img">
                         3D Scan <span>Metrics</span>
                     </a>
                     <p style="max-width: 300px;">Providing state-of-the-art 3D laser scanning services across South Africa. Your partner in digital transformation.</p>

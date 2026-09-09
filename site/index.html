@@ -20,26 +20,61 @@
       "priceRange": "ZAR"
     }
     </script>
-    <script type="application/ld+json">
+            <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
     {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [{
-        "@type": "Question",
-        "name": "What is the accuracy of 3D laser scanning?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Our terrestrial LiDAR scanners capture data with sub-millimeter precision, providing an exact digital replica of the physical environment."
-        }
-      }, {
-        "@type": "Question",
-        "name": "What file formats do you deliver for Scan-to-BIM?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "We deliver raw point cloud data (.rcp, .e57, .las) and intelligent 3D BIM models primarily in native Autodesk Revit (.rvt), Navisworks (.nwd), and open IFC formats."
-        }
-      }]
+      "@type": "Question",
+      "name": "What file formats will I receive, and are they compatible with Revit or AutoCAD?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We deliver registered point cloud data in .RCP, .E57, and .LAS formats (compatible with Autodesk Revit, AutoCAD, Navisworks, and ArchiCAD), as well as native 3D .RVT BIM models (LOD 200–500) and 2D/3D .DWG CAD drawings."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What level of accuracy can 3D laser scanning achieve on site in South Africa?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Our high-definition terrestrial LiDAR scanners achieve sub-millimeter to ±2mm spatial accuracy, allowing engineering and architectural teams in South Africa to pre-detect clashes and eliminate costly site rework."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the difference between a Point Cloud and a Scan-to-BIM model?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A Point Cloud is a raw 3D digital measurement map composed of millions of laser points (.RCP/.E57). Scan-to-BIM converts that raw point cloud into an intelligent, parametric 3D Revit model (.RVT) containing smart building objects."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How long does a 3D scanning survey and modeling project take in South Africa?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Survey teams in South Africa can mobilize within 24 to 48 hours. On-site scanning takes 1 to 2 days, and registered point clouds or 3D BIM models are delivered within 3 to 5 business days."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can 3D laser scanning be conducted on active industrial or mining sites without downtime?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Non-contact terrestrial laser scanning operates safely from a distance without touching equipment or disrupting plant operations. Surveyors hold full safety clearances for active construction sites, refineries, and mines."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How are 3D laser scanning project costs calculated?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Pricing is based on site square footage/acreage, spatial complexity, and requested deliverable type (raw point cloud vs. LOD 300–500 BIM model)."
+      }
     }
+  ]
+}
     </script>
     <link rel="stylesheet" href="styles.css">
     <!-- Phosphor Icons -->
@@ -67,7 +102,7 @@
     <!-- Navbar -->
         <nav>
             <a href="/" class="logo" aria-label="3D Scan Metrics Home">
-                <i class="ph ph-cube-transparent" style="color: var(--primary-cyan);"></i>
+                <img src="/logo.png" alt="3D Scan Metrics Logo" class="logo-img">
                 3D Scan <span>Metrics</span>
             </a>
             <div class="mobile-menu-toggle" id="mobile-menu-toggle">
@@ -118,22 +153,8 @@
                     </div>
                 </div>
                 <div class="hero-image">
-                    <img src="hero_scan.png" alt="High-resolution 3D laser point cloud scan of a commercial building in South Africa for Scan-to-BIM modeling">
+                    <img src="hero_scan.png" alt="Real 3D Laser Scanning Hardware operating on site in South Africa">
                 </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Trusted By B2B Trust Signal -->
-    <section class="trust-banner" style="background: var(--bg-card); padding: 2rem 0; text-align: center; border-bottom: 1px solid var(--border-color); border-top: 1px solid var(--border-color);">
-        <div class="container">
-            <p style="text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">Trusted by Industry Leaders in AEC & Mining</p>
-            <div style="display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap; opacity: 0.7; filter: grayscale(100%);">
-                <i class="ph ph-buildings" style="font-size: 2.5rem;" title="Architecture"></i>
-                <i class="ph ph-factory" style="font-size: 2.5rem;" title="Industrial"></i>
-                <i class="ph ph-hard-hat" style="font-size: 2.5rem;" title="Construction"></i>
-                <i class="ph ph-road-horizon" style="font-size: 2.5rem;" title="Infrastructure"></i>
-                <i class="ph ph-bridge" style="font-size: 2.5rem;" title="Civil"></i>
             </div>
         </div>
     </section>
@@ -142,23 +163,24 @@
     <section class="features" id="why-us">
         <div class="container">
             <h2>Eliminate Clash Errors and Costly Rework.</h2>
-            <p style=" max-width: 600px; margin: 0 auto;">Replace outdated 2D plans with accessible, high-resolution 3D digital data. Save time, reduce costs, and minimize project errors.</p>
+            <p style="max-width: 650px; margin: 0 auto 1rem;">We convert complex physical assets into sub-millimeter accurate digital models. Whether you need structural clash detection or heritage preservation, our reality capture workflows deliver absolute precision.</p>
+            <p style="text-align: center; margin-bottom: 3rem;"><a href="mailto:isaiah@3dscanmetrics.co.za?subject=Request for Proposal" style="color: var(--primary-cyan); text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;"><i class="ph ph-paperclip"></i> Have an official RFP or CAD file? Email our engineering team directly.</a></p>
             
             <div class="features-grid">
                 <div class="feature-card">
                     <i class="ph ph-crosshair feature-icon"></i>
-                    <h3>Millimeter Precision</h3>
-                    <p>Execute <strong>high-definition surveying (HDS)</strong> capturing millions of data points per second. Our terrestrial LiDAR technology delivers millimeter-accurate <strong>point cloud data</strong> that traditional surveying cannot match.</p>
+                    <h3>Sub-Millimeter Accuracy</h3>
+                    <p>Capture every structural beam, pipe line, and wall tolerance with high-definition LiDAR precision up to ±2mm.</p>
                 </div>
                 <div class="feature-card">
-                    <i class="ph ph-buildings feature-icon"></i>
-                    <h3>Digital Twins</h3>
-                    <p>Deploy intelligent <strong>digital twins and as-built modeling</strong>. Analyze, section, and perform rigorous <strong>clash detection</strong> directly from your desk using precise spatial data.</p>
+                    <i class="ph ph-lightning feature-icon"></i>
+                    <h3>4X Faster On-Site</h3>
+                    <p>Reduce field measurement downtime by up to 75%. Rapid multi-station scans capture millions of points per second.</p>
                 </div>
                 <div class="feature-card">
-                    <i class="ph ph-clock-countdown feature-icon"></i>
-                    <h3>Save Time & Money</h3>
-                    <p>Eliminate the need for repeated site visits. Get the complete picture in one scan, drastically reducing project delays and overhead.</p>
+                    <i class="ph ph-shield-check feature-icon"></i>
+                    <h3>Zero-Clash Assurance</h3>
+                    <p>Pre-detect MEP & structural clashes in Navisworks/Revit before fabrication or site installation begins.</p>
                 </div>
             </div>
         </div>
@@ -171,25 +193,25 @@
             <p style=" max-width: 600px; margin: 0 auto 2rem;">Tailored 3D scanning solutions for diverse industrial and architectural needs.</p>
             
             <div class="services-grid">
-                <a href="/services/reverse-engineering" class="service-item" style="background-image: url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; text-decoration: none;">
+                <a href="/services/reverse-engineering" class="service-item" style="background-image: url('/assets/images/service_reverse_engineering.jpg'); background-size: cover; background-position: center; text-decoration: none;">
                     <div class="service-content">
                         <h3>Reverse Engineering & CAD</h3>
                         <p>Digitize legacy machinery and physical assets into native <strong>CAD-ready files</strong> for remanufacturing, rapid prototyping, and reverse engineering.</p>
                     </div>
                 </a>
-                <a href="/services/3d-laser-scanning" class="service-item" style="background-image: url('https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; text-decoration: none;">
+                <a href="/services/3d-laser-scanning" class="service-item" style="background-image: url('/assets/images/service_3d_laser_scanning.jpg'); background-size: cover; background-position: center; text-decoration: none;">
                     <div class="service-content">
                         <h3>High-Definition 3D Laser Scanning</h3>
                         <p>Detailed <strong>as-built surveys</strong>, structural analysis, and <strong>topographic surveying</strong> for complex buildings, infrastructure, and heavy industrial plants.</p>
                     </div>
                 </a>
-                <a href="/services/quality-inspection" class="service-item" style="background-image: url('https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; text-decoration: none;">
+                <a href="/services/quality-inspection" class="service-item" style="background-image: url('/assets/images/service_quality_inspection.jpg'); background-size: cover; background-position: center; text-decoration: none;">
                     <div class="service-content">
                         <h3>Quality Inspection</h3>
                           <p>Compare manufactured parts against original CAD designs to instantly identify deviations and ensure quality control.</p>
                     </div>
                 </a>
-                <a href="/services/scan-to-bim" class="service-item" style="background-image: url('scan_to_bim_bg.png'); background-size: cover; background-position: center; text-decoration: none;">
+                <a href="/services/scan-to-bim" class="service-item" style="background-image: url('/assets/images/service_scan_to_bim.jpg'); background-size: cover; background-position: center; text-decoration: none;">
                     <div class="service-content">
                         <h3>Scan-to-BIM & As-Built Modeling</h3>
                         <p>Translate raw <strong>point cloud data</strong> (.RCP, .E57) into intelligent LOD 300-500 <strong>BIM models (Revit)</strong> for architectural planning and facility management.</p>
@@ -203,15 +225,17 @@
     <section class="technology" id="technology">
         <div class="container">
             <h2>State-of-the-Art Technology & Accuracy</h2>
-            <p style=" max-width: 800px; margin: 0 auto 3rem;">We provide professional <strong>3D laser scanning services across South Africa</strong>, capturing spatial data with unprecedented accuracy. We process raw LiDAR data in <strong>Maptek PointStudio, Deswik, and Autodesk (Revit/AutoCAD)</strong>, ensuring your <strong>Scan-to-BIM</strong> workflows are fully supported.</p>
+            <p style=" max-width: 800px; margin: 0 auto 2.5rem;">We provide professional <strong>3D laser scanning services across South Africa</strong>, capturing spatial data with unprecedented accuracy. We deliver unified deliverables native to your CAD/BIM software workflow.</p>
+            
+            
             
             <div style="display: flex; flex-wrap: wrap; gap: 2rem; align-items: stretch; justify-content: center;">
-                <div class="tech-box" style="flex: 1; min-width: 300px; background: var(--bg-card); padding: 2.5rem; border-radius: 20px; border: 1px solid var(--glass-border); transition: all 0.4s ease;">
+                <div class="tech-box" style="flex: 1; min-width: 300px; background: var(--bg-card); padding: 2.5rem; border-radius: 20px; border: 1px solid var(--glass-border); transition: all 0.4s ease; box-shadow: var(--card-shadow);">
                     <i class="ph ph-target" style="font-size: 2.5rem; color: var(--primary-cyan); margin-bottom: 1rem;"></i>
                     <h3 style="margin-bottom: 1rem;">Sub-Millimeter Tolerances</h3>
                     <p>Our advanced 3D laser scanners capture spatial data with unprecedented accuracy. Whether scanning intricate mechanical parts or expansive architectural structures, we guarantee sub-millimeter tolerances to ensure your digital twin is a flawless representation of reality.</p>
                 </div>
-                <div class="tech-box" style="flex: 1; min-width: 300px; background: var(--bg-card); padding: 2.5rem; border-radius: 20px; border: 1px solid var(--glass-border); transition: all 0.4s ease;">
+                <div class="tech-box" style="flex: 1; min-width: 300px; background: var(--bg-card); padding: 2.5rem; border-radius: 20px; border: 1px solid var(--glass-border); transition: all 0.4s ease; box-shadow: var(--card-shadow);">
                     <i class="ph ph-cpu" style="font-size: 2.5rem; color: var(--primary-cyan); margin-bottom: 1rem;"></i>
                     <h3 style="margin-bottom: 1rem;">Advanced Backend Processing</h3>
                     <p>Capturing data is only the first step. We leverage high-end processing software including <strong>Maptek PointStudio</strong>, <strong>Deswik</strong>, and standard <strong>CAD/BIM environments</strong>. This allows us to handle massive datasets seamlessly, providing you with actionable insights for complex civil, mining, and architectural projects.</p>
@@ -250,30 +274,57 @@
     </section>
 
     <!-- FAQ / Answer Engine Module -->
-    <section class="faq-aeo" id="faq" style="padding-top: 4rem;">
-        <div class="container">
-            <h2 style="text-align: center;">Technical Specifications & FAQs</h2>
-            <p style=" max-width: 800px; margin: 0 auto 3rem;">Common queries regarding our data capture methodologies and deliverables.</p>
-            
-            <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem;">
-                <div style="background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--glass-border);">
-                    <h3 style="margin-bottom: 0.5rem; font-size: 1.2rem; color: var(--text-light);">What is the accuracy of 3D laser scanning?</h3>
-                    <p style="color: var(--text-muted); line-height: 1.6;">Our terrestrial LiDAR scanners capture data with sub-millimeter precision, providing an exact digital replica of the physical environment suitable for structural engineering and clash detection.</p>
-                </div>
-                <div style="background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--glass-border);">
-                    <h3 style="margin-bottom: 0.5rem; font-size: 1.2rem; color: var(--text-light);">What file formats do you deliver for Scan-to-BIM?</h3>
-                    <p style="color: var(--text-muted); line-height: 1.6;">We deliver raw point cloud data (.rcp, .e57, .las) and intelligent 3D BIM models primarily in native Autodesk Revit (.rvt), Navisworks (.nwd), and open IFC formats.</p>
+    <section class="faq-aeo" style="padding: 5rem 0;">
+            <div class="container">
+                <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 3rem;">Frequently Asked Questions (South Africa)</h2>
+                
+                <div class="faq-accordion">
+                    <details class="faq-item" open>
+                        <summary class="faq-summary">What file formats will I receive, and are they compatible with Revit or AutoCAD?</summary>
+                        <div class="faq-content">
+                            <p>We deliver registered point cloud data in <strong>.RCP, .E57, and .LAS</strong> formats (100% compatible with Autodesk Revit, AutoCAD, Navisworks, and ArchiCAD), as well as native 3D <strong>.RVT</strong> BIM models (LOD 200–500) and 2D/3D <strong>.DWG</strong> CAD drawings ready for immediate design workflows.</p>
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="faq-summary">What level of accuracy can 3D laser scanning achieve on site?</summary>
+                        <div class="faq-content">
+                            <p>Our high-definition terrestrial LiDAR scanners achieve sub-millimeter to <strong>±2mm spatial accuracy</strong>. This millimeter precision allows engineering and architectural teams in South Africa to pre-detect clashes and eliminate costly site rework before fabrication or construction begins.</p>
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="faq-summary">What is the difference between a Point Cloud and a Scan-to-BIM model?</summary>
+                        <div class="faq-content">
+                            <p>A <strong>Point Cloud</strong> is a raw 3D digital measurement map composed of millions of laser points (.RCP/.E57). <strong>Scan-to-BIM</strong> converts that raw point cloud into an intelligent, parametric 3D Revit model (.RVT) containing smart building objects like structural beams, walls, pipes, and MEP systems for architectural design and facility management.</p>
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="faq-summary">How long does a 3D scanning survey and modeling project take in South Africa?</summary>
+                        <div class="faq-content">
+                            <p>Our localized survey teams in South Africa can mobilize within <strong>24 to 48 hours</strong> of project approval. On-site scanning is up to 75% faster than manual surveying (typically 1 to 2 days on site), and registered point clouds or 3D BIM models are delivered within 3 to 5 business days.</p>
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="faq-summary">Can 3D laser scanning be conducted on active industrial or mining sites without downtime?</summary>
+                        <div class="faq-content">
+                            <p>Yes. Non-contact terrestrial laser scanning operates safely from a distance without touching equipment or disrupting plant operations. Our field surveyors hold safety certifications and medical clearances to operate on active construction sites, chemical plants, and underground mines across South Africa.</p>
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="faq-summary">How are 3D laser scanning project costs calculated?</summary>
+                        <div class="faq-content">
+                            <p>Pricing is based on site square footage/acreage, spatial complexity (e.g., commercial building vs. complex industrial MEP plant), and requested deliverable type (raw point cloud vs. LOD 300–500 BIM model). You can request an instant indicative cost estimate via our online estimator tool.</p>
+                        </div>
+                    </details>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
     <!-- Cloud Delivery Section -->
     <section class="features" id="cloud-delivery" style="background: var(--bg-dark); border-top: 1px solid var(--glass-border);">
         <div class="container">
             <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4rem;">
                 <div style="flex: 1; min-width: 300px;">
-                    <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800" alt="Zero-friction cloud platform for point cloud data and digital twin delivery directly to your browser" style="width: 100%; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 229, 255, 0.2);">
+                    <img src="/assets/images/cloud_pointcloud_platform.jpg" alt="Zero-friction cloud platform for point cloud data and digital twin delivery directly to your browser" style="width: 100%; border-radius: 20px; box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.04); border: 1px solid var(--glass-border);">
                 </div>
                 <div style="flex: 1; min-width: 300px;">
                     <h2>Point Cloud Data Ready for Revit, AutoCAD, and Maptek.</h2>
@@ -289,10 +340,10 @@
     </section>
 
     <!-- Lead Capture Calculator -->
-    <section class="bottom-cta" style="background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(41, 121, 255, 0.1)); padding: 6rem 0; text-align: center; border-top: 1px solid var(--glass-border);">
+    <section class="bottom-cta" style="background: #f8fafc; padding: 6rem 0; text-align: center; border-top: 1px solid var(--glass-border);">
         <div class="container">
-            <h2 style="font-size: 3rem; margin-bottom: 1.5rem; color: var(--text-main);">Ready to Discuss Your Next Project?</h2>
-            <p style="font-size: 1.2rem; color: var(--text-muted); max-width: 700px; margin: 0 auto 3rem; text-align: center;">Get an indicative price range based on your site complexity, required tolerances, and deliverables.</p>
+            <h2 style="font-size: 3rem; margin-bottom: 1.5rem; color: var(--text-main);">Ready to Start Your 3D Laser Scanning Project?</h2>
+            <p style="font-size: 1.2rem; color: var(--text-muted); max-width: 700px; margin: 0 auto 3rem; text-align: center;">Get an instant price estimate for millimeter-accurate point cloud data, Scan-to-BIM Revit modeling, and 3D reality capture across South Africa.</p>
                         <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
                 <a href="/contact.html#estimator" class="cta-btn">Request an Instant Estimate</a>
                 <a href="tel:+27827336873" class="cta-btn-secondary"><i class="ph ph-phone"></i> Call a Technical Expert</a>
@@ -302,14 +353,33 @@
             </div>
             
             <div class="micro-trust" style="margin-top: 3rem; text-align: center;">
-                <p style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 1rem;">Trusted by Top AEC Firms across South Africa</p>
-                <div style="display: flex; justify-content: center; gap: 2rem; opacity: 0.6; font-size: 1.5rem;">
-                    <i class="ph ph-buildings" title="Architecture"></i>
-                    <i class="ph ph-factory" title="Industrial"></i>
-                    <i class="ph ph-hard-hat" title="Construction"></i>
-                    <i class="ph ph-bridge" title="Civil"></i>
+                <p style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 1.25rem;">Trusted by Top AEC & Mining Firms Across South Africa</p>
+                <div class="client-slider-wrapper">
+                    <div class="client-logos-track">
+                        <div class="client-logo-badge"><img src="/assets/clients/anglo.png" alt="Anglo American" title="Anglo American"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/eskom.png" alt="Eskom" title="Eskom"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/omnia.png" alt="Omnia" title="Omnia"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/wilmar.png" alt="Wilmar" title="Wilmar"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/bmsa.png" alt="BMSA" title="BMSA"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/frys-metal.png" alt="FRYS Metal" title="FRYS Metal"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/santasalo.png" alt="Santasalo" title="Santasalo"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/anglo.png" alt="Anglo American" title="Anglo American"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/eskom.png" alt="Eskom" title="Eskom"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/omnia.png" alt="Omnia" title="Omnia"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/wilmar.png" alt="Wilmar" title="Wilmar"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/bmsa.png" alt="BMSA" title="BMSA"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/frys-metal.png" alt="FRYS Metal" title="FRYS Metal"></div>
+                        <div class="client-logo-badge"><img src="/assets/clients/santasalo.png" alt="Santasalo" title="Santasalo"></div>
+                    </div>
                 </div>
             </div>
+        </div>
+                </div>
+            </div>
+        </div>
+            </div>
+        </div>
+        </div>
         </div>
     </section>
     
@@ -325,7 +395,7 @@
             <div class="footer-content">
                 <div class="footer-col" style="flex: 2; min-width: 250px;">
                     <a href="/" class="logo" style="margin-bottom: 1rem;">
-                        <i class="ph ph-cube-transparent" style="color: var(--primary-cyan);"></i>
+                        <img src="/logo.png" alt="3D Scan Metrics Logo" class="logo-img">
                         3D Scan <span>Metrics</span>
                     </a>
                     <p style="max-width: 300px;">Providing state-of-the-art 3D laser scanning services across South Africa. Your partner in digital transformation.</p>

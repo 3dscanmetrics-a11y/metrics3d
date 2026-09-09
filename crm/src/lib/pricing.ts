@@ -40,6 +40,12 @@ export const DEFAULT_PRICING = {
     300: 1.0,
     400: 1.35,
   } as Record<string, number>,
+  discipline_multipliers: {
+    architectural: 1.0,
+    structural: 0.25,
+    mep: 0.45,
+    site: 0.15,
+  } as Record<string, number>,
 };
 
 export const AREA_BUCKETS: Record<number, { min: number; max: number; mid: number }> = {
@@ -57,11 +63,25 @@ export type QuoteInput = {
   accuracy?: string;
   bimLevel?: string;
   lod?: string;
+  systems?: string[] | string;
+  distanceKm?: number;
+  travelCost?: number;
+  travelAccommodationCost?: number;
   areaUnknown?: boolean;
   areaBucket?: number;
   baseRate?: number;
   finalPrice?: number;
 };
+
+export function calculateTravelCost(distanceKm: number = 0): { extraKm: number; costZar: number; isFree: boolean } {
+  const d = Math.max(0, Number(distanceKm) || 0);
+  if (d <= 30) {
+    return { extraKm: 0, costZar: 0, isFree: true };
+  }
+  const extraKm = d - 30;
+  const costZar = Math.round(extraKm * 18.5 * 2);
+  return { extraKm, costZar, isFree: false };
+}
 
 export type PricingConfig = typeof DEFAULT_PRICING;
 
@@ -111,6 +131,16 @@ function baseRateForArea(config: PricingConfig, area: number) {
   return baseRate;
 }
 
+function isBimDeliverable(d: string): boolean {
+  const l = String(d || '').toLowerCase();
+  return l.includes('bim') || l.includes('rvt') || l.includes('revit') || l.includes('3d model');
+}
+
+function isCadDeliverable(d: string): boolean {
+  const l = String(d || '').toLowerCase();
+  return l.includes('cad') || l.includes('dwg') || l.includes('2d') || l.includes('floor plan');
+}
+
 export function calculatePoint(config: PricingConfig, input: QuoteInput) {
   const area = Number(input.area) || 0;
   const complexity = input.complexity || 'Commercial/Retail/Residential';
@@ -119,31 +149,80 @@ export function calculatePoint(config: PricingConfig, input: QuoteInput) {
   const accuracy = input.accuracy || 'Standard';
   const bimLevel = input.bimLevel || input.lod || '300';
 
+  const hasBim = deliverables.length === 0 || deliverables.some(isBimDeliverable);
+  const lodMult = hasBim ? pickLodMult(config, bimLevel) : 1;
+
   const baseRate = input.baseRate != null ? Number(input.baseRate) : baseRateForArea(config, area);
   const rawAreaCost = area * baseRate;
   const siteMult = config.site_multipliers?.[complexity] ?? DEFAULT_PRICING.site_multipliers[complexity] ?? 1;
   const accessMult = pickAccessMult(config, access);
   const accuracyMult = pickAccuracyMult(config, accuracy);
-  const lodMult = deliverables.includes('bim') ? pickLodMult(config, bimLevel) : 1;
   const flatFee = Number(config.flat_fee ?? DEFAULT_PRICING.flat_fee);
 
   const fieldCost = (rawAreaCost * siteMult + flatFee) * accessMult * accuracyMult;
+
+  // Discipline / Elements to be Modeled multiplier
+  let disciplineMult = 1.0;
+  const rawSystems = input.systems;
+  let systems: string[] = [];
+  if (Array.isArray(rawSystems)) {
+    systems = rawSystems.map(s => String(s).toLowerCase());
+  } else if (typeof rawSystems === 'string' && rawSystems) {
+    const lower = rawSystems.toLowerCase();
+    if (lower.includes('architectural')) systems.push('architectural');
+    if (lower.includes('structural')) systems.push('structural');
+    if (lower.includes('mep')) systems.push('mep');
+    if (lower.includes('site') || lower.includes('topography')) systems.push('site');
+  }
+
+  if (hasBim && systems.length > 0) {
+    const discTable = config.discipline_multipliers || DEFAULT_PRICING.discipline_multipliers;
+    let extraDisciplineEffort = 0;
+    if (systems.includes('structural')) extraDisciplineEffort += Number(discTable.structural ?? 0.25);
+    if (systems.includes('mep')) extraDisciplineEffort += Number(discTable.mep ?? 0.45);
+    if (systems.includes('site')) extraDisciplineEffort += Number(discTable.site ?? 0.15);
+    disciplineMult = 1.0 + extraDisciplineEffort;
+  }
 
   let processingMult = Number(config.processing_base ?? DEFAULT_PRICING.processing_base);
   const delivMults = config.deliverable_multipliers || DEFAULT_PRICING.deliverable_multipliers;
   let bimShare = 0;
   for (const id of deliverables) {
-    if (id === 'raw') continue;
-    const add = Number(delivMults[id] || 0);
+    if (id.toLowerCase().includes('raw')) continue;
+    let add = 0;
+    if (isBimDeliverable(id)) {
+      add = Number(delivMults['bim'] || 1.2) * disciplineMult;
+      bimShare = add;
+    } else if (isCadDeliverable(id)) {
+      add = Number(delivMults['cad'] || 0.5);
+    } else if (id.toLowerCase().includes('topo')) {
+      add = Number(delivMults['topo'] || 0.4);
+    } else if (id.toLowerCase().includes('viewer')) {
+      add = Number(delivMults['viewer'] || 0.1);
+    } else if (delivMults[id] != null) {
+      add = Number(delivMults[id]);
+    }
     processingMult += add;
-    if (id === 'bim') bimShare = add;
   }
-  if (deliverables.includes('bim') && lodMult !== 1) {
-    processingMult = processingMult - bimShare + bimShare * lodMult;
+
+  if (hasBim && lodMult !== 1) {
+    const baseBimShare = bimShare || (Number(delivMults['bim'] || 1.2) * disciplineMult);
+    processingMult = processingMult - baseBimShare + baseBimShare * lodMult;
   }
 
   const processingCost = rawAreaCost * processingMult * accuracyMult;
-  let mid = fieldCost + processingCost;
+
+  // Direct Travel & Accommodation Cost Bundled Figure (or distance fallback)
+  let travelAccomCost = 0;
+  if (input.travelAccommodationCost != null) {
+    travelAccomCost = Math.max(0, Number(input.travelAccommodationCost) || 0);
+  } else if (input.travelCost != null) {
+    travelAccomCost = Math.max(0, Number(input.travelCost) || 0);
+  } else if (input.distanceKm != null && Number(input.distanceKm) > 0) {
+    travelAccomCost = calculateTravelCost(input.distanceKm).costZar;
+  }
+
+  let mid = fieldCost + processingCost + travelAccomCost;
   const floor = Number(config.floor ?? DEFAULT_PRICING.floor);
   if (mid < floor) mid = floor;
   if (input.finalPrice != null && Number(input.finalPrice) > 0) mid = Number(input.finalPrice);
@@ -151,17 +230,63 @@ export function calculatePoint(config: PricingConfig, input: QuoteInput) {
   const baseDays = Math.max(1, Math.ceil(area / 1500));
   const fieldDays = Math.max(1, Math.ceil(baseDays * siteMult * accessMult));
   let processRatio = 1;
-  if (deliverables.includes('cad')) processRatio += 0.5;
-  if (deliverables.includes('bim')) processRatio += 1.5 * lodMult;
+  if (deliverables.some(isCadDeliverable)) processRatio += 0.5;
+  if (hasBim) processRatio += 1.5 * lodMult;
   const processDays = Math.max(1, Math.ceil(fieldDays * processRatio));
 
+  const deliverableLines: { label: string; amount: number }[] = [];
+  
+  // Base Point Cloud Processing
+  deliverableLines.push({
+    label: `Base Point Cloud Scoping & Registration`,
+    amount: rawAreaCost * Number(config.processing_base ?? DEFAULT_PRICING.processing_base) * accuracyMult,
+  });
+
+  for (const id of deliverables) {
+    const lower = id.toLowerCase();
+    if (lower.includes('raw')) {
+      deliverableLines.push({
+        label: `Deliverable: Raw Point Cloud (.E57 / .LAS)`,
+        amount: 0,
+      });
+    } else if (isBimDeliverable(id)) {
+      const bimCost = rawAreaCost * (1.2 * lodMult) * accuracyMult;
+      deliverableLines.push({
+        label: `Deliverable: 3D BIM Model (.RVT) - LOD ${bimLevel} (Mult: ×${lodMult})`,
+        amount: bimCost,
+      });
+    } else if (isCadDeliverable(id)) {
+      const cadCost = rawAreaCost * 0.5 * accuracyMult;
+      deliverableLines.push({
+        label: `Deliverable: 2D CAD Floor Plans & Elevations (.DWG)`,
+        amount: cadCost,
+      });
+    } else if (lower.includes('topo')) {
+      const topoCost = rawAreaCost * 0.4 * accuracyMult;
+      deliverableLines.push({
+        label: `Deliverable: Topographical Survey / Mesh`,
+        amount: topoCost,
+      });
+    } else if (lower.includes('viewer')) {
+      const viewerCost = rawAreaCost * 0.1 * accuracyMult;
+      deliverableLines.push({
+        label: `Deliverable: Web-based Viewer (TruView)`,
+        amount: viewerCost,
+      });
+    }
+  }
+
+  const travelLine = travelAccomCost > 0
+    ? { label: `Travel & Accommodation Surcharge`, amount: travelAccomCost }
+    : { label: `Travel & Accommodation (Included / Local)`, amount: 0 };
+
   const lines = [
-    { label: `Area ${area} sqm @ R${baseRate}/sqm`, amount: rawAreaCost },
-    { label: `Site (${complexity}) ×${siteMult}`, amount: rawAreaCost * (siteMult - 1) },
-    { label: `Mobilisation / flat fee`, amount: flatFee },
-    { label: `Access (${access}) ×${accessMult}`, amount: (rawAreaCost * siteMult + flatFee) * (accessMult - 1) },
-    { label: `Accuracy (${accuracy}) ×${accuracyMult}`, amount: 0 },
-    { label: `Processing (deliv + LOD ${deliverables.includes('bim') ? bimLevel : 'n/a'})`, amount: processingCost },
+    { label: `Site Area Surveying (${area} sqm @ R${baseRate}/sqm)`, amount: rawAreaCost },
+    { label: `Site Environment (${complexity}) ×${siteMult}`, amount: rawAreaCost * (siteMult - 1) },
+    { label: `Mobilisation / Equipment Setup`, amount: flatFee },
+    { label: `Access & Safety (${access}) ×${accessMult}`, amount: (rawAreaCost * siteMult + flatFee) * (accessMult - 1) },
+    ...deliverableLines,
+    travelLine,
   ];
 
   return {

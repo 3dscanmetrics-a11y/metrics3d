@@ -40,6 +40,12 @@ export const DEFAULT_PRICING = {
     300: 1.0,
     400: 1.35,
   },
+  discipline_multipliers: {
+    architectural: 1.0,
+    structural: 0.25,
+    mep: 0.45,
+    site: 0.15,
+  },
 };
 
 export const AREA_BUCKETS = {
@@ -117,14 +123,40 @@ export function calculatePoint(config, input) {
 
   const fieldCost = (rawAreaCost * siteMult + flatFee) * accessMult * accuracyMult;
 
+  // Discipline / Elements to be Modeled multiplier
+  let disciplineMult = 1.0;
+  const rawSystems = input.systems || input.disciplines;
+  let systems = [];
+  if (Array.isArray(rawSystems)) {
+    systems = rawSystems.map(s => String(s).toLowerCase());
+  } else if (typeof rawSystems === 'string' && rawSystems) {
+    const lower = rawSystems.toLowerCase();
+    if (lower.includes('architectural')) systems.push('architectural');
+    if (lower.includes('structural')) systems.push('structural');
+    if (lower.includes('mep')) systems.push('mep');
+    if (lower.includes('site') || lower.includes('topography')) systems.push('site');
+  }
+
+  if (deliverables.includes('bim') && systems.length > 0) {
+    const discTable = config.discipline_multipliers || DEFAULT_PRICING.discipline_multipliers;
+    let extraDisciplineEffort = 0;
+    if (systems.includes('structural')) extraDisciplineEffort += Number(discTable.structural ?? 0.25);
+    if (systems.includes('mep')) extraDisciplineEffort += Number(discTable.mep ?? 0.45);
+    if (systems.includes('site')) extraDisciplineEffort += Number(discTable.site ?? 0.15);
+    disciplineMult = 1.0 + extraDisciplineEffort;
+  }
+
   let processingMult = Number(config.processing_base ?? DEFAULT_PRICING.processing_base);
   const delivMults = config.deliverable_multipliers || DEFAULT_PRICING.deliverable_multipliers;
   let bimShare = 0;
   for (const id of deliverables) {
     if (id === 'raw') continue;
-    const add = Number(delivMults[id] || 0);
+    let add = Number(delivMults[id] || 0);
+    if (id === 'bim') {
+      add = add * disciplineMult;
+      bimShare = add;
+    }
     processingMult += add;
-    if (id === 'bim') bimShare = add;
   }
   if (deliverables.includes('bim') && lodMult !== 1) {
     processingMult = processingMult - bimShare + bimShare * lodMult;

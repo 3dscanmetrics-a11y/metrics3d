@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Briefcase, ChevronDown, Clock, Ruler, Settings } from 'lucide-react';
 import QuoteEditor from './QuoteEditor';
+import { acceptQuoteAndGenerateInvoice } from '../app/actions';
+import { calculateEstimateRange, DEFAULT_PRICING } from '@/lib/pricing';
 
 type Lead = {
   id: string;
@@ -20,7 +22,6 @@ type Lead = {
   payload?: Record<string, unknown>;
   status: string;
   createdAt: string;
-  rawEmail?: string;
   fieldDays: number;
 };
 
@@ -28,19 +29,76 @@ function formatZAR(val: number) {
   return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(val || 0);
 }
 
-function deliverableList(raw: string) {
-  try {
-    return JSON.parse(raw || '[]').join(', ');
-  } catch {
-    return '';
+function deliverableList(raw: unknown) {
+  let list: string[] = [];
+  if (Array.isArray(raw)) {
+    list = raw.map(String);
+  } else if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw || '[]');
+      if (Array.isArray(parsed)) {
+        list = parsed.map(String);
+      } else if (typeof parsed === 'object' && parsed !== null && Array.isArray((parsed as any).deliverables)) {
+        list = (parsed as any).deliverables.map(String);
+      }
+    } catch {
+      list = raw ? [String(raw)] : [];
+    }
+  } else if (typeof raw === 'object' && raw !== null && Array.isArray((raw as any).deliverables)) {
+    list = (raw as any).deliverables.map(String);
   }
+
+  if (list.length === 0) return 'Point Cloud Survey';
+
+  return list
+    .map((d: string) => {
+      if (d === 'raw') return 'Raw Point Cloud (.E57)';
+      if (d === 'viewer') return 'Web Viewer (TruView)';
+      if (d === 'cad') return '2D CAD Floor Plans (.DWG)';
+      if (d === 'topo') return 'Topographical Survey / Mesh';
+      if (d === 'bim') return '3D Revit Model (.RVT)';
+      return d;
+    })
+    .join(', ');
+}
+
+function parseDelivsArray(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.map(String);
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw || '[]');
+      if (Array.isArray(parsed)) return parsed.map(String);
+      if (typeof parsed === 'object' && parsed !== null && Array.isArray((parsed as any).deliverables)) {
+        return (parsed as any).deliverables.map(String);
+      }
+    } catch {}
+  }
+  return [];
 }
 
 export default function LeadCard({ lead, defaultOpen = false }: { lead: Lead; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
-  const range = String(
-    lead.payload?.publicEstimate || lead.estimateFormatted || formatZAR(lead.quoteTotal || 0)
-  );
+  
+  const displayRange = useMemo(() => {
+    const payload = lead.payload || {};
+    const delivs = parseDelivsArray(lead.deliverables).length
+      ? parseDelivsArray(lead.deliverables)
+      : Array.isArray(payload.deliverables)
+      ? (payload.deliverables as string[])
+      : ['raw'];
+    
+    const calc = calculateEstimateRange(DEFAULT_PRICING, {
+      area: Number(lead.area) || 0,
+      complexity: lead.complexity || 'Commercial/Retail/Residential',
+      deliverables: delivs,
+      access: String(payload.access || 'Standard business hours only'),
+      accuracy: String(payload.accuracy || 'Standard'),
+      bimLevel: String(payload.bimLevel || payload.lod || '300'),
+    });
+
+    return calc.formatted;
+  }, [lead]);
+
   const statusClass =
     lead.status === 'PENDING'
       ? 'bg-amber-100 text-amber-800'
@@ -70,7 +128,7 @@ export default function LeadCard({ lead, defaultOpen = false }: { lead: Lead; de
           </p>
         </div>
         <div className="text-right shrink-0 max-w-[42%] sm:max-w-none">
-          <p className="text-xs sm:text-sm font-semibold text-gray-900 leading-snug">{range}</p>
+          <p className="text-xs sm:text-sm font-semibold text-gray-900 leading-snug">{displayRange}</p>
           <p className="text-[10px] sm:text-xs text-gray-400 hidden sm:block">{new Date(lead.createdAt).toLocaleString()}</p>
         </div>
       </button>
@@ -87,19 +145,11 @@ export default function LeadCard({ lead, defaultOpen = false }: { lead: Lead; de
                   <span className="font-semibold text-gray-900">Email:</span> {lead.email}
                 </p>
               </div>
-              <div className="mt-6 pt-6 border-t border-gray-100">
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  Original Email Context
-                </h4>
-                <div className="bg-gray-50 rounded p-3 text-sm text-gray-600 max-h-32 overflow-y-auto font-mono">
-                  {lead.rawEmail?.substring(0, 300)}...
-                </div>
-              </div>
             </div>
 
             <div className="bg-gray-50 p-4 md:p-6 md:w-96">
               <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
-                <Settings className="w-4 h-4 mr-1" /> AI Extracted Parameters
+                <Settings className="w-4 h-4 mr-1 text-orange-600" /> Website Scoping Parameters
               </h4>
               <ul className="space-y-3 text-sm">
                 <li className="flex justify-between">
@@ -127,9 +177,9 @@ export default function LeadCard({ lead, defaultOpen = false }: { lead: Lead; de
                   <span className="font-medium text-gray-900">{lead.fieldDays} Days</span>
                 </li>
               </ul>
-              <div className="mt-6 p-4 bg-white rounded-lg border border-cyan-100 shadow-sm">
-                <p className="text-xs text-cyan-600 font-semibold uppercase">Indicative range</p>
-                <p className="text-xl font-bold text-gray-900 mt-1">{range}</p>
+              <div className="mt-6 p-4 bg-white rounded-lg border border-orange-200 shadow-xs">
+                <p className="text-xs text-orange-600 font-bold uppercase tracking-wider">Website Submitted Quote</p>
+                <p className="text-xl font-bold text-gray-900 mt-1">{displayRange}</p>
               </div>
             </div>
           </div>
@@ -152,6 +202,24 @@ export default function LeadCard({ lead, defaultOpen = false }: { lead: Lead; de
                   payload: lead.payload,
                 }}
               />
+            </div>
+          ) : null}
+
+          {lead.status === 'SENT' || lead.status === 'sent' ? (
+            <div className="border-t border-gray-100 bg-emerald-50/50 p-4 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-emerald-900">Formal Quote Sent</p>
+                <p className="text-xs text-emerald-700">Awaiting client acceptance. Click below when the client approves this quote.</p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  await acceptQuoteAndGenerateInvoice(lead.id);
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition-colors shadow-sm cursor-pointer shrink-0"
+              >
+                Client Accepted — Convert to Invoice
+              </button>
             </div>
           ) : null}
         </div>
