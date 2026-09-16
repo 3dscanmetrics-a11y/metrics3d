@@ -1326,8 +1326,14 @@ footer {
         grid-template-columns: 1fr !important;
     }
     .features-grid { grid-template-columns: 1fr !important; }
-    .feature-card, .tech-box, .service-item { min-width: 0 !important; }
-    [style*="min-width"] { min-width: 0 !important; width: 100%; }
+    .feature-card, .tech-box, .service-item {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        padding: 1.5rem 1.25rem !important;
+    }
+    [style*="min-width"] { min-width: 0 !important; width: 100% !important; flex: 1 1 100% !important; }
 
     .footer-content { text-align: center; align-items: center; }
     .footer-col { min-width: 0 !important; width: 100%; }
