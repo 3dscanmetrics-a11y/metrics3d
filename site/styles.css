@@ -1336,7 +1336,8 @@ footer {
     [style*="min-width"] { min-width: 0 !important; width: 100% !important; flex: 1 1 100% !important; }
 
     .footer-content { text-align: center; align-items: center; }
-    .footer-col { min-width: 0 !important; width: 100%; }
+    .footer-col { min-width: 0 !important; width: 100%; text-align: center !important; display: flex; flex-direction: column; align-items: center; }
+    .footer-col p { text-align: center !important; margin-left: auto !important; margin-right: auto !important; }
     .footer-bottom {
         flex-direction: column !important;
         text-align: center;
