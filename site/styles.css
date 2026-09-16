@@ -1358,6 +1358,42 @@ footer {
     }
     .cyan-banner .banner-divider { display: none; }
 
+    /* Trusted By Client Logo Banner Mobile Fix */
+    .micro-trust {
+        padding: 0 1rem;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .micro-trust p {
+        font-size: 0.75rem !important;
+        letter-spacing: 0.5px !important;
+        margin-bottom: 0.75rem !important;
+        line-height: 1.4 !important;
+        padding: 0 0.5rem;
+    }
+    .client-slider-wrapper {
+        padding: 0.5rem 0 !important;
+        mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent) !important;
+        -webkit-mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent) !important;
+    }
+    .client-logos-track {
+        gap: 2rem !important;
+    }
+    .client-logo-badge {
+        height: 44px !important;
+    }
+    .client-logo-badge img {
+        height: 38px !important;
+        width: auto !important;
+        max-width: 110px !important;
+        object-fit: contain !important;
+    }
+    .client-logo-badge img[src*="eskom"],
+    .client-logo-badge img[src*="bmsa"] {
+        height: 46px !important;
+        max-width: 130px !important;
+    }
+
     /* Estimator */
     .calculator .container > p,
     #estimator > .container > p { text-align: center; max-width: none !important; }
