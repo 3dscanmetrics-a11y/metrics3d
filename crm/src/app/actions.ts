@@ -11,29 +11,25 @@ import { draftOverdueInvoiceEmail } from '@/lib/ai/followup';
 
 export async function getLeads() {
   const db = await getDb();
-  const { results } = await db.prepare('SELECT * FROM leads ORDER BY createdAt DESC').all<Record<string, unknown>>();
+  const { results } = await db.prepare('SELECT * FROM leads ORDER BY created_at DESC').all<Record<string, unknown>>();
   return (results ?? []).map((row) => mapLead(row)!);
 }
 
 export async function getWebsiteLeads() {
   const db = await getDb();
-  const { results } = await db.prepare("SELECT * FROM leads WHERE LOWER(status) IN ('new', 'pending', 'contacted') ORDER BY createdAt DESC").all<Record<string, unknown>>();
+  const { results } = await db.prepare("SELECT * FROM leads WHERE LOWER(status) IN ('new', 'pending', 'contacted') ORDER BY created_at DESC").all<Record<string, unknown>>();
   return (results ?? []).map((row) => mapLead(row)!);
 }
 
 export async function getQuotations() {
   const db = await getDb();
-  const { results } = await db.prepare("SELECT * FROM leads WHERE LOWER(status) IN ('sent', 'quote_sent', 'approved') ORDER BY createdAt DESC").all<Record<string, unknown>>();
+  const { results } = await db.prepare("SELECT * FROM leads WHERE LOWER(status) IN ('sent', 'quote_sent', 'approved') ORDER BY created_at DESC").all<Record<string, unknown>>();
   return (results ?? []).map((row) => mapLead(row)!);
 }
 
 export async function getInvoices() {
   const db = await getDb();
-  try {
-    await db.prepare('ALTER TABLE invoices ADD COLUMN amount_paid REAL DEFAULT 0').run();
-  } catch {}
-
-  const { results: invoiceRows } = await db.prepare('SELECT * FROM invoices ORDER BY createdAt DESC').all<Record<string, unknown>>();
+  const { results: invoiceRows } = await db.prepare('SELECT * FROM invoices ORDER BY created_at DESC').all<Record<string, unknown>>();
   if (!invoiceRows || invoiceRows.length === 0) return [];
 
   const invoices = [];
@@ -52,7 +48,7 @@ export async function getInvoices() {
 
     const searchEmail = lead?.email || row.clientEmail || row.client_email;
     if (searchEmail) {
-      client = await db.prepare('SELECT * FROM clients WHERE email = ? OR company = ?').bind(searchEmail, String(row.clientName || '')).first<Record<string, unknown>>();
+      client = await db.prepare('SELECT * FROM clients WHERE email = ? OR company = ?').bind(searchEmail, String(row.client_name || '')).first<Record<string, unknown>>();
     }
 
     let items: any[] = (itemRows || []).map((i) => ({
@@ -126,13 +122,9 @@ export async function updateInvoice(formData: FormData) {
     items = [];
   }
 
-  try {
-    await db.prepare('ALTER TABLE invoices ADD COLUMN amount_paid REAL DEFAULT 0').run();
-  } catch {}
-
   await db
-    .prepare('UPDATE invoices SET clientName = ?, project = ?, amount = ?, amount_paid = ?, status = ? WHERE id = ?')
-    .bind(clientName, project, amount, amountPaid, status, id)
+    .prepare('UPDATE invoices SET client_name = ?, project = ?, amount = ?, amount_paid = ?, status = ?, payment_terms = ?, updated_at = datetime(\'now\') WHERE id = ?')
+    .bind(clientName, project, amount, amountPaid, status, paymentTerms, id)
     .run();
 
   // Upsert client details into clients table so Address, VAT, and Payment Terms are persisted and mapped to invoice PDFs
@@ -194,13 +186,9 @@ export async function createStandaloneInvoice(formData: FormData) {
 
   const invoiceId = randomUUID();
 
-  try {
-    await db.prepare('ALTER TABLE invoices ADD COLUMN amount_paid REAL DEFAULT 0').run();
-  } catch {}
-
   await db
-    .prepare('INSERT INTO invoices (id, clientName, project, amount, amount_paid, status) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(invoiceId, clientName || 'Valued Client', project, amount, amountPaid, status)
+    .prepare('INSERT INTO invoices (id, client_name, project, amount, amount_paid, status, payment_terms) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(invoiceId, clientName || 'Valued Client', project, amount, amountPaid, status, paymentTerms)
     .run();
 
   for (const item of items) {
@@ -406,7 +394,7 @@ export async function duplicateInvoice(invoiceId: string) {
 
   const newId = randomUUID();
   await db
-    .prepare('INSERT INTO invoices (id, clientName, project, amount, status) VALUES (?, ?, ?, ?, "UNPAID")')
+    .prepare('INSERT INTO invoices (id, client_name, project, amount, status) VALUES (?, ?, ?, ?, "UNPAID")')
     .bind(newId, `${inv.clientName} (Copy)`, inv.project, inv.amount)
     .run();
 
@@ -446,10 +434,6 @@ export async function addExpense(vendor: string, amount: number, category: strin
 
 export async function markInvoicePaid(id: string) {
   const db = await getDb();
-  try {
-    await db.prepare('ALTER TABLE invoices ADD COLUMN amount_paid REAL DEFAULT 0').run();
-  } catch {}
-
   const invoiceRow = await db.prepare('SELECT amount FROM invoices WHERE id = ?').bind(id).first<Record<string, unknown>>();
   const amount = Number(invoiceRow?.amount || 0);
 
@@ -459,10 +443,6 @@ export async function markInvoicePaid(id: string) {
 
 export async function recordInvoicePayment(invoiceId: string, paymentAmount: number) {
   const db = await getDb();
-  try {
-    await db.prepare('ALTER TABLE invoices ADD COLUMN amount_paid REAL DEFAULT 0').run();
-  } catch {}
-
   const invoiceRow = await db.prepare('SELECT * FROM invoices WHERE id = ?').bind(invoiceId).first<Record<string, unknown>>();
   if (!invoiceRow) throw new Error('Invoice not found');
 
@@ -721,8 +701,8 @@ export async function createAdminQuote(formData: FormData) {
 
   await db
     .prepare(
-      `INSERT INTO leads (id, email, name, company, project, area, complexity, deliverables, quoteTotal, fieldDays, processDays, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'sent')`
+      `INSERT INTO leads (id, email, contact_name, company, project, area, complexity, deliverables_json, payload_json, estimate_zar, estimate_formatted, field_days, process_days, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'sent')`
     )
     .bind(
       leadId,
@@ -732,8 +712,10 @@ export async function createAdminQuote(formData: FormData) {
       project,
       area,
       complexity,
+      JSON.stringify(deliverables),
       JSON.stringify(payload),
       firmAmount,
+      formatRange(firmAmount, firmAmount),
       range.fieldDays,
       range.processDays
     )
@@ -754,8 +736,8 @@ export async function syncInvoiceForLead(db: CloudflareEnv['DB'], leadId: string
       .run();
   }
 
-  let invoice = await db
-    .prepare('SELECT * FROM invoices WHERE leadId = ?')
+  const invoice = await db
+    .prepare('SELECT * FROM invoices WHERE lead_id = ?')
     .bind(leadId)
     .first<Record<string, unknown>>();
 
@@ -763,7 +745,7 @@ export async function syncInvoiceForLead(db: CloudflareEnv['DB'], leadId: string
   if (!invoice) {
     invoiceId = randomUUID();
     await db
-      .prepare('INSERT INTO invoices (id, leadId, clientName, project, amount, status) VALUES (?, ?, ?, ?, ?, "UNPAID")')
+      .prepare('INSERT INTO invoices (id, lead_id, client_name, project, amount, status) VALUES (?, ?, ?, ?, ?, "UNPAID")')
       .bind(
         invoiceId,
         lead.id,
@@ -774,7 +756,7 @@ export async function syncInvoiceForLead(db: CloudflareEnv['DB'], leadId: string
       .run();
   } else {
     await db
-      .prepare('UPDATE invoices SET amount = ?, clientName = ?, project = ? WHERE id = ?')
+      .prepare('UPDATE invoices SET amount = ?, client_name = ?, project = ?, updated_at = datetime(\'now\') WHERE id = ?')
       .bind(
         lead.quoteTotal,
         (lead.name as string) || (lead.company as string) || 'Unknown Client',
@@ -988,11 +970,11 @@ async function persistLeadQuote(
   await db
     .prepare(
       `UPDATE leads SET 
-        name = COALESCE(NULLIF(?, ''), name),
+        contact_name = COALESCE(NULLIF(?, ''), contact_name),
         email = COALESCE(NULLIF(?, ''), email),
         company = COALESCE(NULLIF(?, ''), company),
-        area = ?, complexity = ?, deliverables = ?, quoteTotal = ?,
-        fieldDays = ?, processDays = ? WHERE id = ?`
+        area = ?, complexity = ?, deliverables_json = ?, payload_json = ?, estimate_zar = ?, estimate_formatted = ?,
+        field_days = ?, process_days = ?, updated_at = datetime('now') WHERE id = ?`
     )
     .bind(
       q.name,
@@ -1000,8 +982,10 @@ async function persistLeadQuote(
       q.company,
       q.area,
       q.complexity,
+      JSON.stringify(q.deliverables),
       JSON.stringify(payload),
       q.firm,
+      formatRange(q.firm, q.firm),
       q.range.fieldDays,
       q.range.processDays,
       id
@@ -1026,7 +1010,7 @@ async function persistLeadQuote(
     }
   }
 
-  const existingInv = await db.prepare('SELECT id FROM invoices WHERE leadId = ?').bind(id).first();
+  const existingInv = await db.prepare('SELECT id FROM invoices WHERE lead_id = ?').bind(id).first();
   if (existingInv) {
     await syncInvoiceForLead(db, id);
   }

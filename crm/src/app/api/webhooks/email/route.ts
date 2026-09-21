@@ -3,8 +3,13 @@ import { randomUUID } from 'crypto';
 import { getDb } from '@/lib/db';
 import { extractMetricsFromRFP } from '../../../../../scripts/ai';
 import { calculateQuote } from '../../../../../scripts/engine';
+import { isValidWebhookRequest } from '@/lib/webhook-auth';
 
 export async function POST(req: Request) {
+  if (!(await isValidWebhookRequest(req))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const payload = (await req.json()) as {
       from: string;

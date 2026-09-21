@@ -23,8 +23,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "3dscanmetrics",
-      "database_id": "dd6e122f-450b-465c-93af-2aebe9a59acc",
+      "database_name": "3dscanmetrics-crm",
+      "database_id": "bbd419a9-3516-4fda-8ce9-5fcbae058271",
       "migrations_dir": "migrations"
     }
   ]

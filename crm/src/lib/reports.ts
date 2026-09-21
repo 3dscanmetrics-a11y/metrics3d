@@ -20,7 +20,7 @@ export async function generateMonthlyProfitAndLoss(year: number, month: number):
   const endDate = `${year}-${String(month).padStart(2, '0')}-31 23:59:59`;
 
   const revenueRes = await db
-    .prepare("SELECT SUM(amount) as total FROM invoices WHERE status = 'PAID' AND createdAt BETWEEN ? AND ?")
+    .prepare("SELECT SUM(amount) as total FROM invoices WHERE status = 'PAID' AND created_at BETWEEN ? AND ?")
     .bind(startDate, endDate)
     .first<{ total: number | null }>();
 
