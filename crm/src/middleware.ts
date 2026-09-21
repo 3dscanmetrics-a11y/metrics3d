@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function proxy(req: NextRequest) {
+export function middleware(req: NextRequest) {
   // The inbound email endpoint authenticates with WEBHOOK_SIGNING_SECRET.
   // Receipt extraction is an interactive CRM feature and remains behind Basic Auth.
   if (req.nextUrl.pathname === '/api/webhooks/email') {
@@ -29,9 +29,6 @@ export function proxy(req: NextRequest) {
     }
   }
 
-  const url = req.nextUrl;
-  url.pathname = '/api/auth';
-
   return new NextResponse('Auth required', {
     status: 401,
     headers: {
@@ -51,6 +48,8 @@ function constantTimeEqual(left: string, right: string) {
   }
   return mismatch === 0;
 }
+
+export const runtime = 'experimental-edge';
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
