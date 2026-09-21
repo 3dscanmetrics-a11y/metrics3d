@@ -12,6 +12,7 @@ const includeExact = new Set([
   'llms.txt',
   'sitemap.xml',
   'robots.txt',
+  '_routes.json',
   'hero_scan.png',
   'scan_to_bim_bg.png',
   'industry-civil-infrastructure.html',

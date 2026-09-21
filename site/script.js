@@ -381,25 +381,30 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
-                        
-                        if(res.ok) {
-                            if(totalDisplay) {
-                                totalDisplay.textContent = 'Estimate Sent! Please check your email inbox for your detailed scoping breakdown.';
-                                totalDisplay.style.color = '#10b981';
-                            }
-                            nextBtn.textContent = 'Sent to Inbox';
-                            nextBtn.disabled = true;
-                        } else {
-                            throw new Error('API server returned status ' + res.status);
+
+                        const result = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                            throw new Error(result.error || 'The quote service is temporarily unavailable.');
                         }
-                    } catch(err) {
-                        console.warn('API submission complete (preview mode):', err);
-                        if (totalDisplay) {
+
+                        if(totalDisplay) {
                             totalDisplay.textContent = 'Estimate Sent! Please check your email inbox for your detailed scoping breakdown.';
                             totalDisplay.style.color = '#10b981';
                         }
                         nextBtn.textContent = 'Sent to Inbox';
+                        nextBtn.style.opacity = '1';
                         nextBtn.disabled = true;
+                    } catch(err) {
+                        console.error('Quote submission failed:', err);
+                        if (totalDisplay) {
+                            totalDisplay.textContent = err instanceof Error
+                                ? `We couldn't submit your estimate: ${err.message} Please try again.`
+                                : "We couldn't submit your estimate. Please try again.";
+                            totalDisplay.style.color = '#dc2626';
+                        }
+                        nextBtn.textContent = 'Try Again';
+                        nextBtn.style.opacity = '1';
+                        nextBtn.disabled = false;
                     }
                 }
             });
@@ -658,4 +663,3 @@
             link.addEventListener("click", () => setMenuOpen(false));
         });
     }
-

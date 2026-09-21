@@ -43,7 +43,7 @@ export function leadNotifyHtml({ leadId, email, phone, project, company, estimat
       <p><strong>Phone:</strong> ${escapeHtml(phone || '')}</p>
       <p><strong>Indicative range:</strong> ${escapeHtml(estimate)}</p>
       <pre style="background:#f3f4f6;padding:12px;border-radius:8px;overflow:auto;font-size:12px;">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
-      <p>Open MetricsCRM (Worker <strong>admin</strong>) to edit the questionnaire and issue a formal quote.</p>
+      <p>Open MetricsCRM (Worker <strong>crm-admin</strong>) to edit the questionnaire and issue a formal quote.</p>
     </div>
   `;
 }
