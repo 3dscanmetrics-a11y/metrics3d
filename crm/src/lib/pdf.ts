@@ -1,22 +1,10 @@
 // @ts-ignore
 import PDFDocument from 'pdfkit/js/pdfkit.standalone.js';
-import path from 'path';
-import fs from 'fs';
+import { PDF_LOGO as base64Logo } from './pdf-logo';
 import { calculateEstimateRange, DEFAULT_PRICING } from './pricing';
 
 const formatZAR = (val: number) =>
   new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(val || 0);
-
-const logoPath = path.join(process.cwd(), 'public', 'logo.png');
-let base64Logo: string | null = null;
-if (fs.existsSync(logoPath)) {
-  try {
-    const logoBuf = fs.readFileSync(logoPath);
-    base64Logo = 'data:image/png;base64,' + (logoBuf as any).toString('base64');
-  } catch (e) {
-    console.error('[PDF] Failed to read logo.png:', e);
-  }
-}
 
 export function generateQuotePDF(lead: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -34,7 +22,7 @@ export function generateQuotePDF(lead: any): Promise<Buffer> {
       const drawHeaderBar = () => {
         // Logo Graphic
         if (base64Logo) {
-          doc.image(base64Logo, 40, 30, { width: 32, height: 32 });
+          doc.image(base64Logo, 40, 30, { fit: [32, 32], align: 'center', valign: 'center' });
         } else {
           doc.circle(55, 45, 14).fill('#ea580c');
           doc.rect(49, 36, 12, 16).fill('#0f172a');
@@ -55,7 +43,7 @@ export function generateQuotePDF(lead: any): Promise<Buffer> {
 
       // Official Logo
       if (base64Logo) {
-        doc.image(base64Logo, 40, 32, { width: 50, height: 50 });
+        doc.image(base64Logo, 40, 32, { fit: [50, 50], align: 'center', valign: 'center' });
       } else {
         doc.circle(65, 55, 22).fill('#ea580c');
         doc.rect(57, 42, 16, 24).fill('#0f172a');
@@ -402,7 +390,7 @@ export function generateTaxInvoicePDF(invoice: any): Promise<Buffer> {
 
       // Official Logo
       if (base64Logo) {
-        doc.image(base64Logo, 40, 32, { width: 50, height: 50 });
+        doc.image(base64Logo, 40, 32, { fit: [50, 50], align: 'center', valign: 'center' });
       } else {
         doc.circle(65, 55, 22).fill('#ea580c');
       }
@@ -622,7 +610,7 @@ export function generateClientStatementPDF(client: any, invoices: any[]): Promis
 
       // Official Logo
       if (base64Logo) {
-        doc.image(base64Logo, 40, 32, { width: 50, height: 50 });
+        doc.image(base64Logo, 40, 32, { fit: [50, 50], align: 'center', valign: 'center' });
       } else {
         doc.circle(65, 55, 22).fill('#ea580c');
       }
