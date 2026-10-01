@@ -263,7 +263,7 @@ export async function sendCustomQuoteEmail(formData: FormData) {
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
-      from: '3D Scan Metrics Quotes <estimates@3dscanmetrics.co.za>',
+      from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
       to: to || String(lead.email),
       cc: ccList.length > 0 ? ccList : undefined,
       subject: subject || `Your Formal Quote: ${lead.project || '3D Scanning Project'}`,
@@ -325,7 +325,7 @@ export async function sendCustomInvoiceEmail(formData: FormData) {
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
-      from: '3D Scan Metrics Invoicing <accounts@3dscanmetrics.co.za>',
+      from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
       to: to || String(inv.clientEmail),
       cc: ccList.length > 0 ? ccList : undefined,
       subject: subject || `Invoice INV-${String(inv.id).slice(0, 8).toUpperCase()}: ${inv.project || '3D Scanning Services'}`,
@@ -358,7 +358,7 @@ export async function sendInvoiceEmail(invoiceId: string) {
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
-      from: '3D Scan Metrics Invoicing <accounts@3dscanmetrics.co.za>',
+      from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
       to: inv.clientEmail,
       subject: `Invoice INV-${String(inv.id).slice(0, 8).toUpperCase()}: ${inv.project || '3D Scanning Services'}`,
       html: `
@@ -810,7 +810,7 @@ export async function sendQuoteEmail(id: string) {
   if (process.env.RESEND_API_KEY) {
     try {
       await resend.emails.send({
-        from: '3D Scan Metrics <estimates@3dscanmetrics.co.za>',
+        from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
         to: String(lead.email),
         subject: `Your Formal Quote: ${(lead.project as string) || '3D Scanning Project'}`,
         html: `
@@ -855,7 +855,7 @@ export async function approveLead(id: string) {
   if (process.env.RESEND_API_KEY) {
     try {
       await resend.emails.send({
-        from: '3D Scan Metrics <estimates@3dscanmetrics.co.za>',
+        from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
         to: String(lead.email),
         subject: `Your Formal Quote: ${(lead.project as string) || '3D Scanning Project'}`,
         html: `
@@ -1051,7 +1051,7 @@ export async function sendFormalQuote(formData: FormData) {
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
       await resend.emails.send({
-        from: '3D Scan Metrics <estimates@3dscanmetrics.co.za>',
+        from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
         to: String(updated.email),
         subject: `Your Formal Quote: ${updated.project || '3D Scanning Project'}`,
         html: `<p>Hi ${updated.name || 'there'},</p><p>Please find attached your formal scoping quote.</p>`,

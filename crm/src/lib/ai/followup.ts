@@ -55,7 +55,7 @@ Due Date: ${input.dueDate}`;
     if (process.env.RESEND_API_KEY && parsed.htmlBody && input.clientEmail) {
       const resend = new Resend(process.env.RESEND_API_KEY);
       await resend.emails.send({
-        from: '3D Scan Metrics Accounts <estimates@3dscanmetrics.co.za>',
+        from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
         to: input.clientEmail,
         subject: parsed.subject,
         html: parsed.htmlBody,

@@ -18,7 +18,7 @@
   "vars": {
     "PUBLIC_HOSTS": "www.3dscanmetrics.co.za,3dscanmetrics.co.za",
     "LEAD_NOTIFY_EMAIL": "isaiah@3dscanmetrics.co.za",
-    "FROM_EMAIL": "3D Scan Metrics <estimates@3dscanmetrics.co.za>"
+    "FROM_EMAIL": "3D Scan Metrics <isaiah@3dscanmetrics.co.za>"
   },
   "d1_databases": [
     {
