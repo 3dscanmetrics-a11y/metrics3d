@@ -149,7 +149,7 @@ export function calculatePoint(config: PricingConfig, input: QuoteInput) {
   const accuracy = input.accuracy || 'Standard';
   const bimLevel = input.bimLevel || input.lod || '300';
 
-  const hasBim = deliverables.length === 0 || deliverables.some(isBimDeliverable);
+  const hasBim = deliverables.some(isBimDeliverable);
   const lodMult = hasBim ? pickLodMult(config, bimLevel) : 1;
 
   const baseRate = input.baseRate != null ? Number(input.baseRate) : baseRateForArea(config, area);

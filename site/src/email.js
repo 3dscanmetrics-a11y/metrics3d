@@ -72,12 +72,25 @@ export function clientEstimateHtml({ project, area, complexity, estimate }) {
 }
 
 export function leadNotifyHtml({ leadId, email, phone, project, company, estimate, payload }) {
+  const delivs = Array.isArray(payload?.deliverables) ? payload.deliverables : [];
+  const delivSummary = delivs.length > 0 
+    ? delivs.map(d => {
+        if (d === 'raw') return 'Raw Point Cloud (.RCP/.E57)';
+        if (d === 'viewer') return 'Web Viewer (TruView)';
+        if (d === 'cad') return '2D CAD Drawings';
+        if (d === 'topo') return 'Topographical Survey';
+        if (d === 'bim') return `3D BIM Model (LOD ${payload.bimLevel || '300'})`;
+        return d;
+      }).join(', ')
+    : 'Raw Point Cloud Only';
+
   const detailRows = [
     ['Lead ID', leadId],
     ['Project', project],
     ['Company', company],
     ['Email', email],
     ['Phone', phone],
+    ['Deliverables', delivSummary],
   ]
     .map(([label, value]) => detailRow(label, value))
     .join('');

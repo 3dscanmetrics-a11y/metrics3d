@@ -366,13 +366,12 @@
                         safety: document.getElementById('q-safety')?.value || '',
                         power: document.getElementById('q-power')?.value || '',
                         accuracy: document.getElementById('q-accuracy')?.value || 'Standard',
-                        control: document.getElementById('q-control')?.value || '',
-                        bimLevel: document.getElementById('q-bim-level')?.value || '300',
-                        systems: Array.from(document.querySelectorAll('.q-system-checkbox:checked')).map(cb => cb.value),
+                        deliverables: typeof selectedDelivs !== 'undefined' ? Array.from(selectedDelivs) : [],
+                        bimLevel: (typeof selectedDelivs !== 'undefined' && selectedDelivs.has('bim')) ? (document.getElementById('q-bim-level')?.value || '300') : undefined,
+                        systems: (typeof selectedDelivs !== 'undefined' && selectedDelivs.has('bim')) ? Array.from(document.querySelectorAll('.q-system-checkbox:checked')).map(cb => cb.value) : [],
                         reference: document.getElementById('q-reference')?.value || '',
                         dateMob: document.getElementById('q-date-mob')?.value || '',
-                        dateDue: document.getElementById('q-date-due')?.value || '',
-                        deliverables: typeof selectedDelivs !== 'undefined' ? Array.from(selectedDelivs) : []
+                        dateDue: document.getElementById('q-date-due')?.value || ''
                     };
 
                     try {
