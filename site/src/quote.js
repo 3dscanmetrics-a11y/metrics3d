@@ -85,7 +85,7 @@ export async function handleQuote(request, env, ctx) {
 
     const apiKey = env.RESEND_API_KEY;
     if (apiKey) {
-      const from = env.FROM_EMAIL || '3D Scan Metrics <isaiah@3dscanmetrics.co.za>';
+      const from = '3D Scan Metrics <isaiah@3dscanmetrics.co.za>';
       ctx.waitUntil(
         (async () => {
           await sendResendEmail({
