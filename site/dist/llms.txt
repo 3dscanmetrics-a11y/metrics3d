@@ -1,0 +1,12 @@
+# 3D Scan Metrics
+
+3D Scan Metrics provides high-precision 3D laser scanning, Scan-to-BIM, reverse engineering, and quality inspection services across South Africa.
+Primary locations served: Johannesburg, Pretoria, Cape Town, Durban, Port Elizabeth, Sandton, and Centurion.
+
+## Services
+- High-Definition 3D Laser Scanning
+- Scan-to-BIM Modeling (Autodesk Revit, LOD 200-500)
+- Industrial Reverse Engineering
+- Quality Inspection
+
+Website: https://www.3dscanmetrics.co.za/

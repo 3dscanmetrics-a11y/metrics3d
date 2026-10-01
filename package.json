@@ -3,6 +3,7 @@
   "private": true,
   "description": "3D Scan Metrics public site + MetricsCRM",
   "scripts": {
+    "build": "npm run build --prefix site",
     "dev:site": "npm run dev --prefix site",
     "dev:crm": "npm run dev --prefix crm",
     "deploy:site": "npm run deploy --prefix site",
