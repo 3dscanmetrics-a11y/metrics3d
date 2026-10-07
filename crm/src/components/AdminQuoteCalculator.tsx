@@ -25,6 +25,7 @@ import {
 } from '@/lib/pricing';
 import { createAdminQuote, sendQuoteEmail } from '../app/actions';
 import { ClientRecord } from './ClientManagement';
+import SendEmailModal from './SendEmailModal';
 
 // Deliverables matching the public calculator 1-to-1
 const PUBLIC_DELIVERABLES = [
@@ -89,6 +90,7 @@ export default function AdminQuoteCalculator({ clients }: { clients: ClientRecor
   const [loading, setLoading] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [createdLeadId, setCreatedLeadId] = useState<string | null>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -270,6 +272,11 @@ export default function AdminQuoteCalculator({ clients }: { clients: ClientRecor
       setError('Please provide Client Contact Name and Email Address before sending the quote.');
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Please enter a valid Client Email Address (e.g. client@domain.co.za).');
+      return;
+    }
     setSendingEmail(true);
     setError(null);
     setMessage(null);
@@ -279,11 +286,10 @@ export default function AdminQuoteCalculator({ clients }: { clients: ClientRecor
       const res = await createAdminQuote(formData);
       if (res?.success && res.leadId) {
         setCreatedLeadId(res.leadId);
-        await sendQuoteEmail(res.leadId);
-        setMessage('Formal Quote emailed to client successfully! Moved to Formal Quotations pipeline.');
+        setShowEmailModal(true);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to send formal quote email');
+      setError(err.message || 'Failed to prepare quote draft for sending');
     } finally {
       setSendingEmail(false);
     }
@@ -864,6 +870,20 @@ export default function AdminQuoteCalculator({ clients }: { clients: ClientRecor
           </div>
         </div>
       </form>
+      {showEmailModal && createdLeadId && (
+        <SendEmailModal
+          type="quote"
+          documentId={createdLeadId}
+          defaultToEmail={email}
+          defaultClientName={name}
+          defaultProject={project || '3D Laser Scanning Project'}
+          onClose={() => setShowEmailModal(false)}
+          onSuccess={() => {
+            setMessage('Formal Quote emailed to client successfully! Moved to Formal Quotations pipeline.');
+            setShowEmailModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

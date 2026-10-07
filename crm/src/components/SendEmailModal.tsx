@@ -30,7 +30,7 @@ export default function SendEmailModal({
   onSuccess,
 }: SendEmailModalProps) {
   const [toEmail, setToEmail] = useState(defaultToEmail || '');
-  const [ccEmail, setCcEmail] = useState('');
+  const [ccEmail, setCcEmail] = useState('isaiah@3dscanmetrics.co.za');
   const [subject, setSubject] = useState(
     type === 'quote'
       ? `Formal Quotation: ${defaultProject || '3D Laser Scanning Project'}`

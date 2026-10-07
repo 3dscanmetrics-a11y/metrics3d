@@ -244,6 +244,9 @@ export async function sendCustomQuoteEmail(formData: FormData) {
   const pdfBuffer = await generateQuotePDF(lead);
 
   const ccList = cc ? cc.split(',').map((e) => e.trim()).filter(Boolean) : [];
+  if (!ccList.some((e) => e.toLowerCase() === 'isaiah@3dscanmetrics.co.za')) {
+    ccList.push('isaiah@3dscanmetrics.co.za');
+  }
   const attachments: Array<{ filename: string; content: Buffer | string }> = [
     {
       filename: `Formal_Quote_${String(lead.project || '3DScan').replace(/\s+/g, '_')}.pdf`,
@@ -306,6 +309,9 @@ export async function sendCustomInvoiceEmail(formData: FormData) {
   const pdfBuffer = await generateTaxInvoicePDF(inv);
 
   const ccList = cc ? cc.split(',').map((e) => e.trim()).filter(Boolean) : [];
+  if (!ccList.some((e) => e.toLowerCase() === 'isaiah@3dscanmetrics.co.za')) {
+    ccList.push('isaiah@3dscanmetrics.co.za');
+  }
   const attachments: Array<{ filename: string; content: Buffer | string }> = [
     {
       filename: `Invoice_${String(inv.project || '3DScanMetrics').replace(/\s+/g, '_')}.pdf`,
@@ -360,6 +366,7 @@ export async function sendInvoiceEmail(invoiceId: string) {
     await resend.emails.send({
       from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
       to: inv.clientEmail,
+      cc: ['isaiah@3dscanmetrics.co.za'],
       subject: `Invoice INV-${String(inv.id).slice(0, 8).toUpperCase()}: ${inv.project || '3D Scanning Services'}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #111827;">
@@ -820,6 +827,7 @@ export async function sendQuoteEmail(id: string) {
       await resend.emails.send({
         from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
         to: String(lead.email),
+        cc: ['isaiah@3dscanmetrics.co.za'],
         subject: `Your Formal Quote: ${(lead.project as string) || '3D Scanning Project'}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #111827;">
@@ -865,6 +873,7 @@ export async function approveLead(id: string) {
       await resend.emails.send({
         from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
         to: String(lead.email),
+        cc: ['isaiah@3dscanmetrics.co.za'],
         subject: `Your Formal Quote: ${(lead.project as string) || '3D Scanning Project'}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #111827;">
@@ -1061,6 +1070,7 @@ export async function sendFormalQuote(formData: FormData) {
       await resend.emails.send({
         from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
         to: String(updated.email),
+        cc: ['isaiah@3dscanmetrics.co.za'],
         subject: `Your Formal Quote: ${updated.project || '3D Scanning Project'}`,
         html: `<p>Hi ${updated.name || 'there'},</p><p>Please find attached your formal scoping quote.</p>`,
         attachments: [

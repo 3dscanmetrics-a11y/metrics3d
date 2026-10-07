@@ -57,6 +57,7 @@ Due Date: ${input.dueDate}`;
       await resend.emails.send({
         from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
         to: input.clientEmail,
+        cc: ['isaiah@3dscanmetrics.co.za'],
         subject: parsed.subject,
         html: parsed.htmlBody,
       });
