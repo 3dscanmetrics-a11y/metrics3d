@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Briefcase, ChevronDown, Clock, Ruler, Settings } from 'lucide-react';
+import { Briefcase, ChevronDown, Clock, Ruler, Settings, Trash2 } from 'lucide-react';
 import QuoteEditor from './QuoteEditor';
-import { acceptQuoteAndGenerateInvoice } from '../app/actions';
+import { acceptQuoteAndGenerateInvoice, deleteLead } from '../app/actions';
 import { calculateEstimateRange, DEFAULT_PRICING } from '@/lib/pricing';
 
 type Lead = {
@@ -78,6 +78,19 @@ function parseDelivsArray(raw: unknown): string[] {
 
 export default function LeadCard({ lead, defaultOpen = false }: { lead: Lead; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDeleteLead(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to delete lead '${lead.project || lead.name}'? This action cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await deleteLead(lead.id);
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete lead');
+      setDeleting(false);
+    }
+  }
   
   const displayRange = useMemo(() => {
     const payload = lead.payload || {};
@@ -108,30 +121,42 @@ export default function LeadCard({ lead, defaultOpen = false }: { lead: Lead; de
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-      <button
-        type="button"
-        className="w-full text-left px-3 sm:px-5 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 hover:bg-gray-50"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <ChevronDown
-          className={`w-5 h-5 shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
-        />
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${statusClass}`}>
-          {lead.status}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-gray-900 truncate">{lead.project || 'Unknown Project'}</p>
-          <p className="text-sm text-gray-500 truncate">
-            {lead.name}
-            {lead.company ? ` · ${lead.company}` : ''}
-          </p>
-        </div>
-        <div className="text-right shrink-0 max-w-[42%] sm:max-w-none">
-          <p className="text-xs sm:text-sm font-semibold text-gray-900 leading-snug">{displayRange}</p>
-          <p className="text-[10px] sm:text-xs text-gray-400 hidden sm:block">{new Date(lead.createdAt).toLocaleString()}</p>
-        </div>
-      </button>
+      <div className="w-full text-left px-3 sm:px-5 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 hover:bg-gray-50">
+        <button
+          type="button"
+          className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <ChevronDown
+            className={`w-5 h-5 shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${statusClass}`}>
+            {lead.status}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-gray-900 truncate">{lead.project || 'Unknown Project'}</p>
+            <p className="text-sm text-gray-500 truncate">
+              {lead.name}
+              {lead.company ? ` · ${lead.company}` : ''}
+            </p>
+          </div>
+          <div className="text-right shrink-0 max-w-[42%] sm:max-w-none">
+            <p className="text-xs sm:text-sm font-semibold text-gray-900 leading-snug">{displayRange}</p>
+            <p className="text-[10px] sm:text-xs text-gray-400 hidden sm:block">{new Date(lead.createdAt).toLocaleString()}</p>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleDeleteLead}
+          disabled={deleting}
+          className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer shrink-0 border border-transparent hover:border-rose-200"
+          title="Delete Lead / Quote"
+        >
+          <Trash2 size={16} />
+        </button>
+      </div>
 
       {open ? (
         <div className="border-t border-gray-100">

@@ -417,6 +417,14 @@ export async function deleteInvoice(invoiceId: string) {
   return { success: true };
 }
 
+export async function deleteLead(id: string) {
+  const db = await getDb();
+  await db.prepare('UPDATE invoices SET lead_id = NULL WHERE lead_id = ?').bind(id).run();
+  await db.prepare('DELETE FROM leads WHERE id = ?').bind(id).run();
+  revalidatePath('/');
+  return { success: true };
+}
+
 export async function getExpenses() {
   const db = await getDb();
   const { results } = await db.prepare('SELECT * FROM expenses ORDER BY date DESC').all();

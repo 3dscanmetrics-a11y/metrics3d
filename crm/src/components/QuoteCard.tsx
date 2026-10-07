@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Briefcase, CheckCircle2, ChevronDown, Clock, FileText, Mail, Ruler, Send, ArrowRight, Edit } from 'lucide-react';
-import { acceptQuoteAndGenerateInvoice, sendQuoteEmail } from '../app/actions';
+import { Briefcase, CheckCircle2, ChevronDown, Clock, FileText, Mail, Ruler, Send, ArrowRight, Edit, Trash2 } from 'lucide-react';
+import { acceptQuoteAndGenerateInvoice, sendQuoteEmail, deleteLead } from '../app/actions';
 import SendEmailModal from './SendEmailModal';
 import QuoteEditor from './QuoteEditor';
 
@@ -68,6 +68,7 @@ export default function QuoteCard({ lead, defaultOpen = false }: { lead: Lead; d
   const [open, setOpen] = useState(defaultOpen);
   const [isEditing, setIsEditing] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -81,6 +82,17 @@ export default function QuoteCard({ lead, defaultOpen = false }: { lead: Lead; d
       alert(err.message || 'Failed to convert quote to invoice');
     } finally {
       setConverting(false);
+    }
+  }
+
+  async function handleDeleteQuote() {
+    if (!confirm(`Are you sure you want to delete formal quote '${lead.project || lead.name}'? This action cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await deleteLead(lead.id);
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete quote');
+      setDeleting(false);
     }
   }
 
@@ -199,6 +211,17 @@ export default function QuoteCard({ lead, defaultOpen = false }: { lead: Lead; d
               >
                 <Mail size={14} />
                 <span>Send / Resend Email...</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDeleteQuote}
+                disabled={deleting}
+                className="inline-flex items-center justify-center space-x-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold px-3 py-2 rounded-lg border border-rose-200 text-xs transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+                title="Delete Formal Quote"
+              >
+                <Trash2 size={14} />
+                <span>{deleting ? 'Deleting...' : 'Delete'}</span>
               </button>
             </div>
 
