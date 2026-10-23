@@ -20,7 +20,7 @@ const includeExact = new Set([
   'industry-property-development.html',
 ]);
 
-const includeDirs = ['assets', 'services', 'locations', 'contact', 'home'];
+const includeDirs = ['assets', 'services', 'locations', 'home'];
 
 function shouldSkip(name) {
   return (
