@@ -565,7 +565,8 @@ footer {
     font-weight: 600;
     margin-bottom: 8px;
 }
-.calc-field-row input, .calc-field-row select {
+.calc-field-row input:not([type="checkbox"]):not([type="radio"]),
+.calc-field-row select {
     width: 100%;
     background: #ffffff;
     border: 1px solid #cbd5e1;
@@ -576,10 +577,35 @@ footer {
     border-radius: 8px;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
-.calc-field-row input:focus, .calc-field-row select:focus {
+.calc-field-row input:not([type="checkbox"]):not([type="radio"]):focus,
+.calc-field-row select:focus {
     border-color: var(--primary-cyan);
     outline: none;
     box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.15);
+}
+.area-unknown-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.area-unknown-row input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--primary-cyan);
+}
+.area-unknown-row label {
+    display: inline-block;
+    margin: 0 !important;
+    font-size: 0.9rem;
+    font-weight: 400;
+    line-height: 1.35;
+    color: var(--text-muted);
+    cursor: pointer;
 }
 .calc-field-row input.is-invalid, .calc-field-row select.is-invalid {
     border-color: #ff3b30 !important;
@@ -1475,7 +1501,7 @@ footer {
     }
     .area-unknown-row {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         gap: 10px;
     }
     .area-unknown-row label {
