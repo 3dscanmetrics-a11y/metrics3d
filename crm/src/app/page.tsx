@@ -34,9 +34,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const expenses = (await getExpenses()) as any[];
   const clients = (await getClients()) as any[];
 
-  // P&L Calculations
-  const totalRevenue = invoices.filter((i) => i.status === 'PAID').reduce((sum, i) => sum + i.amount, 0);
-  const pendingRevenue = invoices.filter((i) => i.status === 'UNPAID').reduce((sum, i) => sum + i.amount, 0);
+  // P&L Calculations (including partial payments)
+  const totalInvoicedAmount = invoices.reduce((sum, i) => sum + Number(i.amount || 0), 0);
+  const totalRevenue = invoices.reduce((sum, i) => {
+    const isPaid = String(i.status || '').toUpperCase() === 'PAID';
+    return sum + (isPaid ? Number(i.amount || 0) : Number(i.amountPaid ?? i.amount_paid ?? 0));
+  }, 0);
+  const pendingRevenue = Math.max(0, totalInvoicedAmount - totalRevenue);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const netProfit = totalRevenue - totalExpenses;
 
@@ -258,7 +262,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           {view === 'calculator' && <AdminQuoteCalculator clients={clients} />}
 
           {/* VIEW 4: CLIENT DIRECTORY */}
-          {view === 'clients' && <ClientManagement initialClients={clients} />}
+          {view === 'clients' && <ClientManagement initialClients={clients} initialInvoices={invoices} />}
 
           {/* VIEW 5: INVOICES */}
           {view === 'invoices' && <InvoiceManagement initialInvoices={invoices} initialClients={clients} />}

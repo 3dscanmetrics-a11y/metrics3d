@@ -37,24 +37,36 @@ export async function GET(
         .bind(leadId)
         .first<Record<string, unknown>>();
       lead = mapLead(leadRow);
-      if (lead) {
+      if (items.length === 0 && lead) {
         items = getLeadBreakdownItems(lead);
       }
     }
 
-    const searchEmail = lead?.email || invoice.clientEmail || invoice.client_email;
-    if (searchEmail) {
+    const searchEmail = String(lead?.email || invoice.clientEmail || invoice.client_email || '').trim();
+    const searchName = String(invoice.client_name || invoice.clientName || lead?.company || lead?.name || '').trim();
+
+    if (searchEmail && searchName) {
       client = await db
-        .prepare('SELECT * FROM clients WHERE email = ? OR company = ?')
-        .bind(searchEmail, invoice.clientName || '')
+        .prepare('SELECT * FROM clients WHERE LOWER(email) = LOWER(?) OR LOWER(company) = LOWER(?) OR LOWER(name) = LOWER(?)')
+        .bind(searchEmail, searchName, searchName)
+        .first<Record<string, unknown>>();
+    } else if (searchEmail) {
+      client = await db
+        .prepare('SELECT * FROM clients WHERE LOWER(email) = LOWER(?)')
+        .bind(searchEmail)
+        .first<Record<string, unknown>>();
+    } else if (searchName) {
+      client = await db
+        .prepare('SELECT * FROM clients WHERE LOWER(company) = LOWER(?) OR LOWER(name) = LOWER(?)')
+        .bind(searchName, searchName)
         .first<Record<string, unknown>>();
     }
 
     const fullInvoice = {
       ...invoice,
       clientCompany: client?.company || lead?.company || '',
-      contactName: client?.name || lead?.name || invoice.clientName || 'Valued Client',
-      clientName: client?.company || lead?.company || client?.name || lead?.name || invoice.clientName || 'Valued Client',
+      contactName: client?.name || lead?.name || invoice.client_name || invoice.clientName || 'Valued Client',
+      clientName: invoice.client_name || invoice.clientName || client?.company || lead?.company || client?.name || lead?.name || 'Valued Client',
       clientEmail: client?.email || lead?.email || invoice.clientEmail || invoice.client_email || '',
       clientPhone: client?.phone || client?.mobile || lead?.phone || '',
       clientAddress: [client?.billingStreet || client?.billing_street, client?.billingCity || client?.billing_city, client?.billingPostalCode || client?.billing_postal_code].filter(Boolean).join(', ') || (lead?.payload as any)?.siteLocation || '',

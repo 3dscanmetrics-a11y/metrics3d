@@ -9,6 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const projectParam = (request.nextUrl.searchParams.get('project') || '').trim();
     const db = await getDb();
 
     // Fetch client record by ID
@@ -21,22 +22,47 @@ export async function GET(
       return new Response('Client Not Found', { status: 404 });
     }
 
-    // Fetch all system invoices and filter those matching this client's email, company, or name
+    // Fetch all system invoices and filter those matching this client's ID, email, company, or name
     const allInvoices = await getInvoices();
     const clientEmail = String(client.email || '').toLowerCase().trim();
     const clientCompany = String(client.company || '').toLowerCase().trim();
     const clientName = String(client.name || '').toLowerCase().trim();
 
-    const clientInvoices = allInvoices.filter((inv: any) => {
+    let clientInvoices = allInvoices.filter((inv: any) => {
+      if (inv.clientId && String(inv.clientId) === String(client.id)) return true;
+
       const invEmail = String(inv.clientEmail || '').toLowerCase().trim();
       const invComp = String(inv.clientCompany || inv.clientName || '').toLowerCase().trim();
       const invContact = String(inv.contactName || inv.clientName || '').toLowerCase().trim();
+      const invRawName = String(inv.clientName || '').toLowerCase().trim();
 
       if (clientEmail && invEmail && clientEmail === invEmail) return true;
-      if (clientCompany && invComp && (clientCompany === invComp || invComp.includes(clientCompany))) return true;
-      if (clientName && invContact && (clientName === invContact || invContact.includes(clientName))) return true;
+      if (clientCompany && (clientCompany === invComp || clientCompany === invRawName || invComp.includes(clientCompany) || clientCompany.includes(invRawName))) {
+        if (invRawName.length > 2) return true;
+      }
+      if (clientName && (clientName === invContact || clientName === invRawName || invContact.includes(clientName) || clientName.includes(invRawName))) {
+        if (invRawName.length > 2) return true;
+      }
       return false;
     });
+
+    // Filter per project if ?project= query parameter is supplied
+    let resolvedProjectScope = projectParam;
+    if (projectParam && projectParam.toUpperCase() !== 'ALL') {
+      const targetProj = projectParam.toLowerCase();
+      clientInvoices = clientInvoices.filter(
+        (inv: any) => String(inv.project || '').trim().toLowerCase() === targetProj
+      );
+    } else {
+      resolvedProjectScope = '';
+      // If all invoices for this client belong to a single project, display that project in the statement header
+      const uniqueProjects = Array.from(
+        new Set(clientInvoices.map((inv: any) => String(inv.project || '').trim()).filter(Boolean))
+      );
+      if (uniqueProjects.length === 1) {
+        resolvedProjectScope = uniqueProjects[0];
+      }
+    }
 
     const clientRecord = {
       ...client,
@@ -50,17 +76,21 @@ export async function GET(
       billingStreet: String(client.billing_street || client.billingStreet || ''),
       billingCity: String(client.billing_city || client.billingCity || ''),
       billingPostalCode: String(client.billing_postal_code || client.billingPostalCode || ''),
+      projectScope: resolvedProjectScope,
     };
 
-    const pdfBuffer = await generateClientStatementPDF(clientRecord, clientInvoices);
+    const pdfBuffer = await generateClientStatementPDF(clientRecord, clientInvoices, resolvedProjectScope);
 
-    const safeFileName = String(clientRecord.company || clientRecord.name || 'Client').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const safeClientName = String(clientRecord.company || clientRecord.name || 'Client').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const safeProjectSuffix = resolvedProjectScope
+      ? `_${resolvedProjectScope.replace(/[^a-zA-Z0-9_-]/g, '_')}`
+      : '';
 
     return new Response(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="Statement_of_Account_${safeFileName}.pdf"`,
+        'Content-Disposition': `inline; filename="Statement_of_Account_${safeClientName}${safeProjectSuffix}.pdf"`,
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
         'Pragma': 'no-cache',
         'Expires': '0',

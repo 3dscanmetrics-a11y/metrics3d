@@ -90,6 +90,7 @@ export default function InvoiceManagement({
   // Record Payment Modal state
   const [recordPaymentInvoice, setRecordPaymentInvoice] = useState<InvoiceRecord | null>(null);
   const [paymentAmountInput, setPaymentAmountInput] = useState<number>(0);
+  const [paymentMode, setPaymentMode] = useState<'set' | 'add'>('set');
 
   // New Invoice Form State
   const [newClientName, setNewClientName] = useState('');
@@ -199,7 +200,27 @@ export default function InvoiceManagement({
       fd.set('amount', String(calcTotal));
       fd.set('items', JSON.stringify(editItems));
 
-      await updateInvoice(fd);
+      const res = await updateInvoice(fd);
+      setInvoices((prev) =>
+        prev.map((inv) =>
+          inv.id === editingInvoice.id
+            ? {
+                ...inv,
+                clientName: editClientName,
+                clientEmail: editClientEmail,
+                clientPhone: editClientPhone,
+                clientAddress: editClientAddress,
+                clientVat: editClientVat,
+                paymentTerms: editPaymentTerms,
+                project: editProject,
+                amount: res.amount ?? calcTotal,
+                amountPaid: res.amountPaid ?? editAmountPaid,
+                status: res.status ?? editStatus,
+                items: editItems,
+              }
+            : inv
+        )
+      );
       setMessage(`Invoice INV-${editingInvoice.id.slice(0, 8).toUpperCase()} updated successfully!`);
       setEditingInvoice(null);
       router.refresh();
@@ -252,8 +273,17 @@ export default function InvoiceManagement({
     setMessage(null);
 
     try {
-      await recordInvoicePayment(recordPaymentInvoice.id, Number(paymentAmountInput) || 0);
-      setMessage(`Recorded payment entry of ${formatZAR(paymentAmountInput)} for INV-${recordPaymentInvoice.id.slice(0, 8).toUpperCase()}`);
+      const res = await recordInvoicePayment(recordPaymentInvoice.id, Number(paymentAmountInput) || 0, paymentMode);
+      setInvoices((prev) =>
+        prev.map((inv) =>
+          inv.id === recordPaymentInvoice.id
+            ? { ...inv, amountPaid: res.amountPaid, status: res.status }
+            : inv
+        )
+      );
+      setMessage(
+        `Updated payment for INV-${recordPaymentInvoice.id.slice(0, 8).toUpperCase()} — Total Paid: ${formatZAR(res.amountPaid)} (${res.status === 'PARTIAL' ? 'PARTIALLY PAID' : res.status})`
+      );
       setRecordPaymentInvoice(null);
       router.refresh();
     } catch (err: any) {
@@ -488,7 +518,7 @@ export default function InvoiceManagement({
 
                       {/* PDF View */}
                       <a
-                        href={`/api/invoices/${inv.id}/pdf`}
+                        href={`/api/invoices/${inv.id}/pdf?v=${amountPaid}_${inv.status}_${inv.amount}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         title="View PDF Invoice Document"
@@ -496,6 +526,18 @@ export default function InvoiceManagement({
                       >
                         <FileText className="w-3.5 h-3.5 text-orange-600" />
                         <span>PDF</span>
+                      </a>
+
+                      {/* Project Statement PDF View */}
+                      <a
+                        href={`/api/invoices/${inv.id}/statement/pdf?v=${amountPaid}_${inv.status}_${inv.amount}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Generate Project Statement of Account for: ${inv.project}`}
+                        className="inline-flex items-center space-x-1 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-800 font-semibold px-2.5 py-1.5 rounded-lg text-xs transition-colors shadow-2xs"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Statement</span>
                       </a>
 
                       {/* Send Email */}
@@ -508,28 +550,32 @@ export default function InvoiceManagement({
                         <Mail className="w-3.5 h-3.5" />
                       </button>
 
-                      {/* Record Partial Payment */}
-                      {!isPaid && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setRecordPaymentInvoice(inv);
-                            const rem = Math.max(0, inv.amount - (inv.amountPaid || 0));
-                            setPaymentAmountInput(rem);
-                          }}
-                          title="Record Deposit or Partial Payment Entry"
-                          className="bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold border border-amber-200 px-2 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex items-center space-x-1"
-                        >
-                          <DollarSign className="w-3.5 h-3.5 text-amber-600" />
-                          <span>Payment</span>
-                        </button>
-                      )}
+                      {/* Record / Update Partial Payment */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRecordPaymentInvoice(inv);
+                          const currentPaidVal = Number(inv.amountPaid || 0);
+                          setPaymentMode('set');
+                          setPaymentAmountInput(currentPaidVal > 0 ? currentPaidVal : inv.amount);
+                        }}
+                        title="Record or Update Deposit / Partial Payment"
+                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold border border-amber-200 px-2 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex items-center space-x-1"
+                      >
+                        <DollarSign className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Payment</span>
+                      </button>
 
                       {/* Mark Paid */}
                       {!isPaid && (
                         <form
                           action={async () => {
                             await markInvoicePaid(inv.id);
+                            setInvoices((prev) =>
+                              prev.map((row) =>
+                                row.id === inv.id ? { ...row, status: 'PAID', amountPaid: row.amount } : row
+                              )
+                            );
                             router.refresh();
                           }}
                         >
@@ -682,31 +728,55 @@ export default function InvoiceManagement({
                 <label className="block text-xs font-bold text-gray-700 mb-1">Invoice Status</label>
                 <select
                   value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value)}
+                  onChange={(e) => {
+                    const nextSt = e.target.value;
+                    setEditStatus(nextSt);
+                    const calcTot = editItems.reduce(
+                      (sum, i) => sum + (Number(i.quantity || 1) * Number(i.unitPriceZar || 0)),
+                      0
+                    );
+                    if (nextSt === 'PAID') {
+                      setEditAmountPaid(calcTot);
+                    } else if (nextSt === 'UNPAID') {
+                      setEditAmountPaid(0);
+                    }
+                  }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white font-bold focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="UNPAID">UNPAID</option>
                   <option value="PARTIAL">PARTIALLY PAID</option>
                   <option value="PAID">PAID</option>
-                  <option value="OVERDUE">OVERDUE</option>
                   <option value="DRAFT">DRAFT</option>
                   <option value="VOID">VOID</option>
                 </select>
               </div>
 
-              {(editStatus === 'PARTIAL' || editAmountPaid > 0) && (
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Deposit / Amount Paid (ZAR)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editAmountPaid}
-                    onChange={(e) => setEditAmountPaid(Number(e.target.value))}
-                    placeholder="0.00"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-orange-500 text-emerald-700"
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Deposit / Amount Paid (ZAR)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editAmountPaid}
+                  onChange={(e) => {
+                    const val = Math.max(0, Number(e.target.value) || 0);
+                    setEditAmountPaid(val);
+                    const calcTot = editItems.reduce(
+                      (sum, i) => sum + (Number(i.quantity || 1) * Number(i.unitPriceZar || 0)),
+                      0
+                    );
+                    if (val >= calcTot && calcTot > 0) {
+                      setEditStatus('PAID');
+                    } else if (val > 0) {
+                      setEditStatus('PARTIAL');
+                    } else if (editStatus === 'PARTIAL' || editStatus === 'PAID') {
+                      setEditStatus('UNPAID');
+                    }
+                  }}
+                  placeholder="0.00"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-orange-500 text-emerald-700"
+                />
+              </div>
             </div>
 
             {/* Line Items Editor */}
@@ -1105,9 +1175,9 @@ export default function InvoiceManagement({
                   <DollarSign size={20} />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">Record Payment Entry</h3>
+                  <h3 className="text-base font-bold text-gray-900">Update / Record Payment</h3>
                   <p className="text-xs text-gray-500">
-                    INV-{recordPaymentInvoice.id.slice(0, 8).toUpperCase()} — {recordPaymentInvoice.clientName}
+                    INV-{recordPaymentInvoice.id.slice(0, 8).toUpperCase()} — {recordPaymentInvoice.project}
                   </p>
                 </div>
               </div>
@@ -1116,29 +1186,73 @@ export default function InvoiceManagement({
               </button>
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-xl space-y-2 text-xs">
-              <div className="flex justify-between text-gray-600">
-                <span>Total Invoice Amount:</span>
-                <span className="font-bold text-gray-900">{formatZAR(recordPaymentInvoice.amount)}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Previously Paid:</span>
-                <span className="font-bold text-emerald-700">{formatZAR(recordPaymentInvoice.amountPaid || 0)}</span>
-              </div>
-              <div className="flex justify-between text-gray-900 border-t border-gray-200 pt-2 font-bold">
-                <span>Current Outstanding Balance:</span>
-                <span className="text-amber-800 font-black">
-                  {formatZAR(Math.max(0, recordPaymentInvoice.amount - (recordPaymentInvoice.amountPaid || 0)))}
-                </span>
-              </div>
+            {/* Mode Toggle: Set Total Paid vs Add Installment */}
+            <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentMode('set');
+                  setPaymentAmountInput(Number(recordPaymentInvoice.amountPaid || 0));
+                }}
+                className={`py-2 px-3 rounded-lg transition-colors cursor-pointer ${
+                  paymentMode === 'set' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Set Total Paid Amount
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentMode('add');
+                  const rem = Math.max(0, recordPaymentInvoice.amount - (recordPaymentInvoice.amountPaid || 0));
+                  setPaymentAmountInput(rem);
+                }}
+                className={`py-2 px-3 rounded-lg transition-colors cursor-pointer ${
+                  paymentMode === 'add' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                + Add New Installment
+              </button>
             </div>
+
+            {(() => {
+              const prevPaid = Number(recordPaymentInvoice.amountPaid || 0);
+              const invTotal = Number(recordPaymentInvoice.amount || 0);
+              const inputNum = Math.max(0, Number(paymentAmountInput) || 0);
+              const previewPaid = Math.min(invTotal, paymentMode === 'set' ? inputNum : prevPaid + inputNum);
+              const previewBal = Math.max(0, invTotal - previewPaid);
+
+              return (
+                <div className="bg-gray-50 p-4 rounded-xl space-y-2 text-xs">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Total Invoice Amount:</span>
+                    <span className="font-bold text-gray-900">{formatZAR(invTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Previously Paid:</span>
+                    <span className="font-bold text-gray-700">{formatZAR(prevPaid)}</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-800 border-t border-gray-200 pt-2 font-bold">
+                    <span>Updated Total Paid:</span>
+                    <span className="font-black text-emerald-700">{formatZAR(previewPaid)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-900 font-bold">
+                    <span>Updated Balance Remaining:</span>
+                    <span className="text-amber-800 font-black">{formatZAR(previewBal)}</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             <form onSubmit={handleRecordPaymentSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">New Payment Received (ZAR)</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  {paymentMode === 'set' ? 'Total Amount Paid to Date (ZAR)' : 'Additional Payment Received (ZAR)'}
+                </label>
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   required
                   value={paymentAmountInput}
                   onChange={(e) => setPaymentAmountInput(Number(e.target.value))}
@@ -1146,7 +1260,9 @@ export default function InvoiceManagement({
                   className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 text-emerald-800"
                 />
                 <p className="text-[11px] text-gray-500 mt-1">
-                  Submitting a payment total matching or exceeding the balance will automatically update invoice status to <strong>PAID IN FULL</strong>.
+                  {paymentMode === 'set'
+                    ? 'Directly sets the total partially paid amount on this invoice and updates the Project Statement.'
+                    : 'Adds this new payment installment to the previously paid amount and updates the Project Statement.'}
                 </p>
               </div>
 
@@ -1163,7 +1279,7 @@ export default function InvoiceManagement({
                   disabled={loading}
                   className="px-5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
                 >
-                  {loading ? 'Recording...' : '💾 Save Payment Entry'}
+                  {loading ? 'Saving...' : '💾 Save Payment Update'}
                 </button>
               </div>
             </form>

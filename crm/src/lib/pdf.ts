@@ -599,7 +599,7 @@ export function generateTaxInvoicePDF(invoice: any): Promise<Buffer> {
   });
 }
 
-export function generateClientStatementPDF(client: any, invoices: any[]): Promise<Buffer> {
+export function generateClientStatementPDF(client: any, invoices: any[], projectScope?: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: 'A4', margin: 40 });
@@ -625,18 +625,26 @@ export function generateClientStatementPDF(client: any, invoices: any[]): Promis
 
       const statementDate = new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' });
       const accountNo = client.accountNumber || `CLI-${String(client.id || '001').slice(0, 6).toUpperCase()}`;
+      const resolvedProject = (projectScope || client.projectScope || '').trim();
 
       // Statement Title & Metadata (Right Header)
-      doc.fillColor('#ea580c').fontSize(14).font('Helvetica-Bold').text('STATEMENT OF ACCOUNT', 320, 36, { align: 'right' });
-      doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold').text(`Account #: ${accountNo}`, 320, 56, { align: 'right' });
-      doc.fillColor('#64748b').fontSize(8.5).font('Helvetica').text(`Statement Date: ${statementDate}`, 320, 68, { align: 'right' });
+      doc.fillColor('#ea580c').fontSize(14).font('Helvetica-Bold').text('STATEMENT OF ACCOUNT', 300, 36, { align: 'right' });
+      doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold').text(`Account #: ${accountNo}`, 300, 56, { align: 'right' });
+      doc.fillColor('#64748b').fontSize(8.5).font('Helvetica').text(`Statement Date: ${statementDate}`, 300, 68, { align: 'right' });
+      if (resolvedProject) {
+        doc.fillColor('#ea580c').fontSize(8.5).font('Helvetica-Bold').text(`Project: ${resolvedProject}`, 260, 81, { align: 'right', width: 295 });
+      }
 
       // Separator Line
       doc.moveTo(40, 105).lineTo(555, 105).strokeColor('#cbd5e1').lineWidth(0.5).stroke();
 
       // Account Holder Info Block
       let y = 115;
-      doc.fontSize(9.5).font('Helvetica-Bold').fillColor('#0f172a').text('ACCOUNT HOLDER DETAILS', 40, y);
+      doc.fontSize(9.5).font('Helvetica-Bold').fillColor('#0f172a').text(
+        resolvedProject ? 'ACCOUNT HOLDER & PROJECT DETAILS' : 'ACCOUNT HOLDER DETAILS',
+        40,
+        y
+      );
 
       const clientName = client.name || client.company || 'Valued Client';
       const company = client.company && client.company !== client.name ? client.company : '';
@@ -651,6 +659,12 @@ export function generateClientStatementPDF(client: any, invoices: any[]): Promis
       } else {
         doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0f172a').text('Client Name: ', 40, y, { continued: true });
         doc.font('Helvetica').text(clientName);
+      }
+
+      if (resolvedProject) {
+        y += 12;
+        doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0f172a').text('Project Scope: ', 40, y, { continued: true });
+        doc.fillColor('#ea580c').font('Helvetica-Bold').text(resolvedProject);
       }
 
       y += 12;
@@ -673,15 +687,16 @@ export function generateClientStatementPDF(client: any, invoices: any[]): Promis
       doc.font('Helvetica').text(vatVal || '');
 
       // Table Header Row
-      y += 24;
+      y += 22;
       doc.rect(40, y, 515, 20).fill('#0f172a');
-      doc.fillColor('#ffffff').fontSize(8.5).font('Helvetica-Bold');
-      doc.text('Date', 48, y + 5, { width: 65 });
-      doc.text('Invoice Ref', 115, y + 5, { width: 75 });
-      doc.text('Project / Description', 190, y + 5, { width: 150 });
-      doc.text('Status', 345, y + 5, { width: 50, align: 'center' });
-      doc.text('Billed (ZAR)', 400, y + 5, { width: 75, align: 'right' });
-      doc.text('Balance (ZAR)', 480, y + 5, { width: 70, align: 'right' });
+      doc.fillColor('#ffffff').fontSize(8).font('Helvetica-Bold');
+      doc.text('Date', 46, y + 6, { width: 52 });
+      doc.text('Invoice Ref', 100, y + 6, { width: 66 });
+      doc.text('Project / Description', 168, y + 6, { width: 132 });
+      doc.text('Status', 302, y + 6, { width: 50, align: 'center' });
+      doc.text('Billed (ZAR)', 354, y + 6, { width: 64, align: 'right' });
+      doc.text('Paid (ZAR)', 420, y + 6, { width: 64, align: 'right' });
+      doc.text('Balance (ZAR)', 486, y + 6, { width: 64, align: 'right' });
 
       y += 20;
 
@@ -692,39 +707,43 @@ export function generateClientStatementPDF(client: any, invoices: any[]): Promis
       if (!invoices || invoices.length === 0) {
         doc.rect(40, y, 515, 24).fill('#f8fafc');
         doc.fillColor('#64748b').fontSize(8.5).font('Helvetica-Oblique');
-        doc.text('No transaction records found for this account.', 48, y + 7);
+        doc.text('No transaction records found for this project/account.', 48, y + 7);
         y += 24;
       } else {
         invoices.forEach((inv: any, idx: number) => {
           const invAmount = Number(inv.amount || 0);
-          const isPaid = String(inv.status).toUpperCase() === 'PAID';
+          const rawStatus = String(inv.status || 'UNPAID').toUpperCase();
+          const isPaidStatus = rawStatus === 'PAID';
+          const rawPaid = Number(inv.amountPaid ?? inv.amount_paid ?? 0);
+          const paidAmount = isPaidStatus ? invAmount : Math.min(invAmount, Math.max(0, rawPaid));
+          const balAmount = Math.max(0, Math.round((invAmount - paidAmount) * 100) / 100);
+          const isPaid = isPaidStatus || (invAmount > 0 && balAmount <= 0);
+          const isPartial = !isPaid && paidAmount > 0;
 
           totalInvoiced += invAmount;
-          if (isPaid) {
-            totalPaid += invAmount;
-          } else {
-            totalOutstanding += invAmount;
-          }
+          totalPaid += paidAmount;
+          totalOutstanding += balAmount;
 
-          const invDateStr = new Date(inv.createdAt || Date.now()).toLocaleDateString('en-ZA', { year: '2-digit', month: '2-digit', day: '2-digit' });
+          const invDateStr = new Date(inv.createdAt || inv.created_at || Date.now()).toLocaleDateString('en-ZA', { year: '2-digit', month: '2-digit', day: '2-digit' });
           const invRef = `INV-${String(inv.id || '').slice(0, 8).toUpperCase()}`;
 
           const isBg = idx % 2 === 1;
-          if (isBg) doc.rect(40, y, 515, 18).fill('#f8fafc');
+          if (isBg) doc.rect(40, y, 515, 20).fill('#f8fafc');
 
-          doc.fillColor('#334155').fontSize(8).font('Helvetica');
-          doc.text(invDateStr, 48, y + 4, { width: 65 });
-          doc.font('Helvetica-Bold').text(invRef, 115, y + 4, { width: 75 });
-          doc.font('Helvetica').text(String(inv.project || '3D Laser Scanning'), 190, y + 4, { width: 150 });
+          doc.fillColor('#334155').fontSize(7.8).font('Helvetica');
+          doc.text(invDateStr, 46, y + 5, { width: 52 });
+          doc.font('Helvetica-Bold').text(invRef, 100, y + 5, { width: 66 });
+          doc.font('Helvetica').text(String(inv.project || '3D Laser Scanning'), 168, y + 5, { width: 132, lineBreak: false, ellipsis: true });
 
-          const statusColor = isPaid ? '#059669' : '#dc2626';
-          doc.fillColor(statusColor).font('Helvetica-Bold').text(isPaid ? 'PAID' : 'UNPAID', 345, y + 4, { width: 50, align: 'center' });
+          const statusLabel = isPaid ? 'PAID' : isPartial ? 'PARTIAL' : 'UNPAID';
+          const statusColor = isPaid ? '#059669' : isPartial ? '#d97706' : '#dc2626';
+          doc.fillColor(statusColor).font('Helvetica-Bold').text(statusLabel, 302, y + 5, { width: 50, align: 'center' });
 
-          doc.fillColor('#0f172a').font('Helvetica').text(formatZAR(invAmount), 400, y + 4, { width: 75, align: 'right' });
-          const balAmount = isPaid ? 0 : invAmount;
-          doc.font(balAmount > 0 ? 'Helvetica-Bold' : 'Helvetica').fillColor(balAmount > 0 ? '#b91c1c' : '#0f172a').text(formatZAR(balAmount), 480, y + 4, { width: 70, align: 'right' });
+          doc.fillColor('#0f172a').font('Helvetica').text(formatZAR(invAmount), 354, y + 5, { width: 64, align: 'right' });
+          doc.fillColor(paidAmount > 0 ? '#059669' : '#64748b').font(paidAmount > 0 ? 'Helvetica-Bold' : 'Helvetica').text(formatZAR(paidAmount), 420, y + 5, { width: 64, align: 'right' });
+          doc.font(balAmount > 0 ? 'Helvetica-Bold' : 'Helvetica').fillColor(balAmount > 0 ? '#b91c1c' : '#0f172a').text(formatZAR(balAmount), 486, y + 5, { width: 64, align: 'right' });
 
-          y += 18;
+          y += 20;
         });
       }
 
@@ -759,7 +778,8 @@ export function generateClientStatementPDF(client: any, invoices: any[]): Promis
       doc.font('Helvetica-Bold').text('Account Number: ', 50, y, { continued: true }).font('Helvetica').text('62909760185');
       doc.font('Helvetica-Bold').text('Branch Code: ', 280, y, { continued: true }).font('Helvetica').text('250655');
       y += 12;
-      doc.font('Helvetica-Bold').text('Payment Reference: ', 50, y, { continued: true }).font('Helvetica').text(`${accountNo} (${clientName})`);
+      const payRef = resolvedProject ? `${accountNo} - ${resolvedProject}` : `${accountNo} (${clientName})`;
+      doc.font('Helvetica-Bold').text('Payment Reference: ', 50, y, { continued: true }).font('Helvetica').text(payRef);
 
       doc.end();
     } catch (err) {

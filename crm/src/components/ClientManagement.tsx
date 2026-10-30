@@ -54,13 +54,91 @@ export interface ClientRecord {
   created_at?: string;
 }
 
-export default function ClientManagement({ initialClients }: { initialClients: ClientRecord[] }) {
+const formatZAR = (val: number) =>
+  new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(val || 0);
+
+export default function ClientManagement({
+  initialClients,
+  initialInvoices = [],
+}: {
+  initialClients: ClientRecord[];
+  initialInvoices?: any[];
+}) {
   const router = useRouter();
   const [clients, setClients] = useState<ClientRecord[]>(initialClients);
+  const [statementClient, setStatementClient] = useState<ClientRecord | null>(null);
 
   useEffect(() => {
     setClients(initialClients);
   }, [initialClients]);
+
+  function getClientInvoices(client: ClientRecord) {
+    const clientEmail = String(client.email || '').toLowerCase().trim();
+    const clientCompany = String(client.company || '').toLowerCase().trim();
+    const clientName = String(client.name || '').toLowerCase().trim();
+
+    return (initialInvoices || []).filter((inv: any) => {
+      if (inv.clientId && String(inv.clientId) === String(client.id)) return true;
+      const invEmail = String(inv.clientEmail || '').toLowerCase().trim();
+      const invComp = String(inv.clientCompany || inv.clientName || '').toLowerCase().trim();
+      const invContact = String(inv.contactName || inv.clientName || '').toLowerCase().trim();
+      const invRawName = String(inv.clientName || '').toLowerCase().trim();
+
+      if (clientEmail && invEmail && clientEmail === invEmail) return true;
+      if (
+        clientCompany &&
+        (clientCompany === invComp ||
+          clientCompany === invRawName ||
+          invComp.includes(clientCompany) ||
+          clientCompany.includes(invRawName))
+      ) {
+        if (invRawName.length > 2) return true;
+      }
+      if (
+        clientName &&
+        (clientName === invContact ||
+          clientName === invRawName ||
+          invContact.includes(clientName) ||
+          clientName.includes(invRawName))
+      ) {
+        if (invRawName.length > 2) return true;
+      }
+      return false;
+    });
+  }
+
+  function getClientProjectSummaries(client: ClientRecord) {
+    const matched = getClientInvoices(client);
+    const map = new Map<
+      string,
+      { project: string; count: number; totalBilled: number; totalPaid: number; balance: number }
+    >();
+
+    for (const inv of matched) {
+      const projName = String(inv.project || '3D Laser Scanning Services').trim();
+      const key = projName.toLowerCase();
+      const invAmount = Number(inv.amount || 0);
+      const isPaid = String(inv.status || '').toUpperCase() === 'PAID';
+      const rawPaid = Number(inv.amountPaid ?? inv.amount_paid ?? 0);
+      const paidAmt = isPaid ? invAmount : Math.min(invAmount, Math.max(0, rawPaid));
+      const balAmt = Math.max(0, invAmount - paidAmt);
+
+      const existing = map.get(key) || {
+        project: projName,
+        count: 0,
+        totalBilled: 0,
+        totalPaid: 0,
+        balance: 0,
+      };
+      existing.count += 1;
+      existing.totalBilled += invAmount;
+      existing.totalPaid += paidAmt;
+      existing.balance += balAmt;
+      map.set(key, existing);
+    }
+
+    return Array.from(map.values());
+  }
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
@@ -351,16 +429,15 @@ export default function ClientManagement({ initialClients }: { initialClients: C
                   {/* Actions */}
                   <td className="px-6 py-4 whitespace-nowrap text-right text-xs">
                     <div className="flex items-center justify-end space-x-2">
-                      <a
-                        href={`/api/clients/${client.id}/statement/pdf`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => setStatementClient(client)}
                         className="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors cursor-pointer"
-                        title="Generate Client Statement of Account PDF"
+                        title="Generate Per-Project Statement of Account PDF"
                       >
                         <FileText size={14} className="mr-1 text-amber-600" />
                         <span>Statement</span>
-                      </a>
+                      </button>
                       <button
                         onClick={() => handleOpenEdit(client)}
                         className="p-1.5 bg-gray-100 hover:bg-orange-100 text-gray-700 hover:text-orange-700 rounded-lg transition-colors cursor-pointer"
@@ -816,6 +893,117 @@ export default function ClientManagement({ initialClients }: { initialClients: C
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* PER-PROJECT STATEMENT SELECTOR MODAL */}
+      {statementClient && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl max-w-xl w-full p-6 space-y-5 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-amber-100 text-amber-700 rounded-xl">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Generate Project Statement</h3>
+                  <p className="text-xs text-gray-500">
+                    {statementClient.company || statementClient.name} — Select a project to generate its Statement of Account
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStatementClient(null)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {(() => {
+                const projectSummaries = getClientProjectSummaries(statementClient);
+                if (projectSummaries.length === 0) {
+                  return (
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center space-y-3">
+                      <p className="text-xs text-gray-600">
+                        No invoices are currently linked to <strong>{statementClient.company || statementClient.name}</strong>.
+                      </p>
+                      <a
+                        href={`/api/clients/${statementClient.id}/statement/pdf?v=${Date.now()}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                      >
+                        <FileText size={14} className="mr-1.5" />
+                        <span>Download Blank Account Statement</span>
+                      </a>
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    <p className="text-xs font-semibold text-gray-600">
+                      Projects for this client ({projectSummaries.length}):
+                    </p>
+                    {projectSummaries.map((proj) => (
+                      <div
+                        key={proj.project}
+                        className="border border-gray-200 rounded-xl p-4 hover:border-amber-300 bg-gray-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors"
+                      >
+                        <div className="space-y-1">
+                          <div className="font-bold text-gray-900 text-sm">{proj.project}</div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                            <span className="text-gray-500">
+                              {proj.count} {proj.count === 1 ? 'Invoice' : 'Invoices'}
+                            </span>
+                            <span className="text-gray-700 font-semibold">
+                              Billed: {formatZAR(proj.totalBilled)}
+                            </span>
+                            <span className="text-emerald-700 font-bold">
+                              Paid: {formatZAR(proj.totalPaid)}
+                            </span>
+                            <span className={proj.balance > 0 ? 'text-rose-700 font-extrabold' : 'text-gray-600 font-semibold'}>
+                              Balance: {formatZAR(proj.balance)}
+                            </span>
+                          </div>
+                        </div>
+                        <a
+                          href={`/api/clients/${statementClient.id}/statement/pdf?project=${encodeURIComponent(proj.project)}&v=${proj.totalPaid}_${proj.totalBilled}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center px-3.5 py-2 rounded-lg text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 transition-colors shrink-0 shadow-2xs"
+                        >
+                          <FileText size={14} className="mr-1.5" />
+                          <span>Project Statement PDF</span>
+                        </a>
+                      </div>
+                    ))}
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+              <a
+                href={`/api/clients/${statementClient.id}/statement/pdf?project=ALL&v=${Date.now()}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold text-gray-600 hover:text-orange-600 underline"
+              >
+                Download Combined Statement (All Projects)
+              </a>
+              <button
+                type="button"
+                onClick={() => setStatementClient(null)}
+                className="px-4 py-2 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -46,9 +46,24 @@ export async function getInvoices() {
       lead = mapLead(leadRow);
     }
 
-    const searchEmail = lead?.email || row.clientEmail || row.client_email;
-    if (searchEmail) {
-      client = await db.prepare('SELECT * FROM clients WHERE email = ? OR company = ?').bind(searchEmail, String(row.client_name || '')).first<Record<string, unknown>>();
+    const searchEmail = String(lead?.email || row.clientEmail || row.client_email || '').trim();
+    const searchName = String(row.client_name || row.clientName || lead?.company || lead?.name || '').trim();
+
+    if (searchEmail && searchName) {
+      client = await db
+        .prepare('SELECT * FROM clients WHERE LOWER(email) = LOWER(?) OR LOWER(company) = LOWER(?) OR LOWER(name) = LOWER(?)')
+        .bind(searchEmail, searchName, searchName)
+        .first<Record<string, unknown>>();
+    } else if (searchEmail) {
+      client = await db
+        .prepare('SELECT * FROM clients WHERE LOWER(email) = LOWER(?)')
+        .bind(searchEmail)
+        .first<Record<string, unknown>>();
+    } else if (searchName) {
+      client = await db
+        .prepare('SELECT * FROM clients WHERE LOWER(company) = LOWER(?) OR LOWER(name) = LOWER(?)')
+        .bind(searchName, searchName)
+        .first<Record<string, unknown>>();
     }
 
     let items: any[] = (itemRows || []).map((i) => ({
@@ -64,19 +79,25 @@ export async function getInvoices() {
     }
 
     const invAmount = Number(row.amount || 0);
-    const statusStr = String(row.status || 'UNPAID').toUpperCase();
+    let statusStr = String(row.status || 'UNPAID').toUpperCase();
     let amountPaid = Number(row.amount_paid ?? row.amountPaid ?? 0);
     if (statusStr === 'PAID') {
       amountPaid = invAmount;
+    } else if (amountPaid >= invAmount && invAmount > 0) {
+      amountPaid = invAmount;
+      statusStr = 'PAID';
+    } else if (amountPaid > 0 && statusStr === 'UNPAID') {
+      statusStr = 'PARTIAL';
     }
 
     invoices.push({
       ...row,
       id: invId,
       leadId: leadId ? String(leadId) : '',
-      clientName: String(client?.company || lead?.company || client?.name || lead?.name || row.clientName || row.client_name || 'Valued Client'),
+      clientId: client?.id ? String(client.id) : '',
+      clientName: String(row.client_name || row.clientName || client?.company || lead?.company || client?.name || lead?.name || 'Valued Client'),
       contactName: String(client?.name || lead?.name || row.clientName || row.client_name || 'Valued Client'),
-      clientCompany: String(client?.company || lead?.company || ''),
+      clientCompany: String(client?.company || lead?.company || row.client_name || row.clientName || ''),
       clientEmail: String(client?.email || lead?.email || row.clientEmail || row.client_email || ''),
       clientPhone: String(client?.phone || client?.mobile || lead?.phone || ''),
       clientAddress: [client?.billing_street || client?.billingStreet, client?.billing_city || client?.billingCity, client?.billing_postal_code || client?.billingPostalCode].filter(Boolean).join(', ') || (lead?.payload as any)?.siteLocation || '',
@@ -109,11 +130,26 @@ export async function updateInvoice(formData: FormData) {
   const paymentTerms = String(formData.get('paymentTerms') || '30 Days').trim();
   const project = String(formData.get('project') || '').trim();
   const amount = Number(formData.get('amount')) || 0;
-  const status = String(formData.get('status') || 'UNPAID').toUpperCase();
+  let rawStatus = String(formData.get('status') || 'UNPAID').toUpperCase();
+  if (!['DRAFT', 'UNPAID', 'PARTIAL', 'PAID', 'VOID'].includes(rawStatus)) {
+    rawStatus = 'UNPAID';
+  }
 
-  let amountPaid = Number(formData.get('amountPaid')) || 0;
-  if (status === 'PAID') amountPaid = amount;
-  if (status === 'UNPAID') amountPaid = 0;
+  let amountPaid = Math.max(0, Number(formData.get('amountPaid')) || 0);
+  let finalStatus = rawStatus;
+
+  if (rawStatus === 'PAID') {
+    amountPaid = amount;
+    finalStatus = 'PAID';
+  } else if (amountPaid >= amount && amount > 0) {
+    amountPaid = amount;
+    finalStatus = 'PAID';
+  } else if (amountPaid > 0) {
+    finalStatus = 'PARTIAL';
+  } else {
+    amountPaid = 0;
+    finalStatus = rawStatus === 'DRAFT' || rawStatus === 'VOID' ? rawStatus : 'UNPAID';
+  }
 
   let items: Array<{ id?: string; description: string; quantity: number; unitPriceZar: number; totalZar: number }> = [];
   try {
@@ -124,18 +160,26 @@ export async function updateInvoice(formData: FormData) {
 
   await db
     .prepare('UPDATE invoices SET client_name = ?, project = ?, amount = ?, amount_paid = ?, status = ?, payment_terms = ?, updated_at = datetime(\'now\') WHERE id = ?')
-    .bind(clientName, project, amount, amountPaid, status, paymentTerms, id)
+    .bind(clientName, project, amount, amountPaid, finalStatus, paymentTerms, id)
     .run();
 
   // Upsert client details into clients table so Address, VAT, and Payment Terms are persisted and mapped to invoice PDFs
   if (clientEmail || clientName) {
     const existing = clientEmail
-      ? await db.prepare('SELECT * FROM clients WHERE email = ?').bind(clientEmail).first<Record<string, unknown>>()
-      : await db.prepare('SELECT * FROM clients WHERE company = ? OR name = ?').bind(clientName, clientName).first<Record<string, unknown>>();
+      ? await db.prepare('SELECT * FROM clients WHERE LOWER(email) = LOWER(?)').bind(clientEmail).first<Record<string, unknown>>()
+      : await db.prepare('SELECT * FROM clients WHERE LOWER(company) = LOWER(?) OR LOWER(name) = LOWER(?)').bind(clientName, clientName).first<Record<string, unknown>>();
 
     if (existing) {
       await db
-        .prepare('UPDATE clients SET name = ?, phone = ?, vat_number = ?, billing_street = ?, payment_terms = ? WHERE id = ?')
+        .prepare(
+          `UPDATE clients SET
+            name = COALESCE(NULLIF(?, ''), name),
+            phone = COALESCE(NULLIF(?, ''), phone),
+            vat_number = COALESCE(NULLIF(?, ''), vat_number),
+            billing_street = COALESCE(NULLIF(?, ''), billing_street),
+            payment_terms = COALESCE(NULLIF(?, ''), payment_terms)
+           WHERE id = ?`
+        )
         .bind(clientName, clientPhone, clientVat, clientAddress, paymentTerms, String(existing.id))
         .run();
     } else if (clientEmail) {
@@ -159,7 +203,7 @@ export async function updateInvoice(formData: FormData) {
   }
 
   revalidatePath('/');
-  return { success: true };
+  return { success: true, amount, amountPaid, status: finalStatus };
 }
 
 export async function createStandaloneInvoice(formData: FormData) {
@@ -171,7 +215,10 @@ export async function createStandaloneInvoice(formData: FormData) {
   const clientVat = String(formData.get('clientVat') || '').trim();
   const paymentTerms = String(formData.get('paymentTerms') || '30 Days').trim();
   const project = String(formData.get('project') || '3D Laser Scanning Services').trim();
-  const status = String(formData.get('status') || 'UNPAID').toUpperCase();
+  let rawStatus = String(formData.get('status') || 'UNPAID').toUpperCase();
+  if (!['DRAFT', 'UNPAID', 'PARTIAL', 'PAID', 'VOID'].includes(rawStatus)) {
+    rawStatus = 'UNPAID';
+  }
 
   let items: Array<{ description: string; quantity: number; unitPriceZar: number; totalZar: number }> = [];
   try {
@@ -181,14 +228,26 @@ export async function createStandaloneInvoice(formData: FormData) {
   }
 
   const amount = items.reduce((sum, i) => sum + Number(i.totalZar || (Number(i.quantity || 1) * Number(i.unitPriceZar || 0))), 0);
-  let amountPaid = Number(formData.get('amountPaid')) || 0;
-  if (status === 'PAID') amountPaid = amount;
+  let amountPaid = Math.max(0, Number(formData.get('amountPaid')) || 0);
+  let finalStatus = rawStatus;
+  if (rawStatus === 'PAID') {
+    amountPaid = amount;
+    finalStatus = 'PAID';
+  } else if (amountPaid >= amount && amount > 0) {
+    amountPaid = amount;
+    finalStatus = 'PAID';
+  } else if (amountPaid > 0) {
+    finalStatus = 'PARTIAL';
+  } else {
+    amountPaid = 0;
+    finalStatus = rawStatus === 'DRAFT' ? 'DRAFT' : 'UNPAID';
+  }
 
   const invoiceId = randomUUID();
 
   await db
     .prepare('INSERT INTO invoices (id, client_name, project, amount, amount_paid, status, payment_terms) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .bind(invoiceId, clientName || 'Valued Client', project, amount, amountPaid, status, paymentTerms)
+    .bind(invoiceId, clientName || 'Valued Client', project, amount, amountPaid, finalStatus, paymentTerms)
     .run();
 
   for (const item of items) {
@@ -203,18 +262,26 @@ export async function createStandaloneInvoice(formData: FormData) {
 
   if (clientEmail || clientName) {
     const existing = clientEmail
-      ? await db.prepare('SELECT * FROM clients WHERE email = ?').bind(clientEmail).first<Record<string, unknown>>()
-      : (clientName ? await db.prepare('SELECT * FROM clients WHERE company = ? OR name = ?').bind(clientName, clientName).first<Record<string, unknown>>() : null);
+      ? await db.prepare('SELECT * FROM clients WHERE LOWER(email) = LOWER(?)').bind(clientEmail).first<Record<string, unknown>>()
+      : (clientName ? await db.prepare('SELECT * FROM clients WHERE LOWER(company) = LOWER(?) OR LOWER(name) = LOWER(?)').bind(clientName, clientName).first<Record<string, unknown>>() : null);
 
     if (existing) {
       await db
-        .prepare('UPDATE clients SET name = ?, phone = ?, vat_number = ?, billing_street = ?, payment_terms = ? WHERE id = ?')
+        .prepare(
+          `UPDATE clients SET
+            name = COALESCE(NULLIF(?, ''), name),
+            phone = COALESCE(NULLIF(?, ''), phone),
+            vat_number = COALESCE(NULLIF(?, ''), vat_number),
+            billing_street = COALESCE(NULLIF(?, ''), billing_street),
+            payment_terms = COALESCE(NULLIF(?, ''), payment_terms)
+           WHERE id = ?`
+        )
         .bind(clientName, clientPhone, clientVat, clientAddress, paymentTerms, String(existing.id))
         .run();
-    } else {
+    } else if (clientEmail) {
       await db
         .prepare('INSERT INTO clients (id, name, company, email, phone, vat_number, billing_street, payment_terms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-        .bind(randomUUID(), clientName, clientName, clientEmail || '', clientPhone, clientVat, clientAddress, paymentTerms)
+        .bind(randomUUID(), clientName, clientName, clientEmail, clientPhone, clientVat, clientAddress, paymentTerms)
         .run();
     }
   }
@@ -452,27 +519,35 @@ export async function markInvoicePaid(id: string) {
   const invoiceRow = await db.prepare('SELECT amount FROM invoices WHERE id = ?').bind(id).first<Record<string, unknown>>();
   const amount = Number(invoiceRow?.amount || 0);
 
-  await db.prepare("UPDATE invoices SET status = 'PAID', amount_paid = ? WHERE id = ?").bind(amount, id).run();
+  await db.prepare("UPDATE invoices SET status = 'PAID', amount_paid = ?, updated_at = datetime('now') WHERE id = ?").bind(amount, id).run();
   revalidatePath('/');
 }
 
-export async function recordInvoicePayment(invoiceId: string, paymentAmount: number) {
+export async function recordInvoicePayment(
+  invoiceId: string,
+  paymentAmount: number,
+  mode: 'add' | 'set' = 'add'
+) {
   const db = await getDb();
   const invoiceRow = await db.prepare('SELECT * FROM invoices WHERE id = ?').bind(invoiceId).first<Record<string, unknown>>();
   if (!invoiceRow) throw new Error('Invoice not found');
 
   const totalAmount = Number(invoiceRow.amount || 0);
-  const currentPaid = Number(invoiceRow.amount_paid ?? 0);
-  const newAmountPaid = Math.min(totalAmount, currentPaid + Math.max(0, paymentAmount));
+  const currentPaid = Number(invoiceRow.amount_paid ?? invoiceRow.amountPaid ?? 0);
+  const rawTarget = mode === 'set' ? Math.max(0, paymentAmount) : currentPaid + Math.max(0, paymentAmount);
+  const newAmountPaid = Math.min(totalAmount, Math.round(rawTarget * 100) / 100);
 
   let newStatus = 'PARTIAL';
-  if (newAmountPaid >= totalAmount) {
+  if (newAmountPaid >= totalAmount && totalAmount > 0) {
     newStatus = 'PAID';
   } else if (newAmountPaid <= 0) {
     newStatus = 'UNPAID';
   }
 
-  await db.prepare('UPDATE invoices SET amount_paid = ?, status = ? WHERE id = ?').bind(newAmountPaid, newStatus, invoiceId).run();
+  await db
+    .prepare("UPDATE invoices SET amount_paid = ?, status = ?, updated_at = datetime('now') WHERE id = ?")
+    .bind(newAmountPaid, newStatus, invoiceId)
+    .run();
   revalidatePath('/');
   return { success: true, amountPaid: newAmountPaid, status: newStatus };
 }
@@ -1019,7 +1094,7 @@ async function persistLeadQuote(
         .prepare('UPDATE clients SET name = COALESCE(NULLIF(?, ""), name), company = COALESCE(NULLIF(?, ""), company), phone = COALESCE(NULLIF(?, ""), phone) WHERE id = ?')
         .bind(q.name, q.company, q.phone, String(existing.id))
         .run();
-    } else {
+    } else if (q.email) {
       await db
         .prepare('INSERT INTO clients (id, name, company, email, phone) VALUES (?, ?, ?, ?, ?)')
         .bind(randomUUID(), q.name || 'Valued Client', q.company || q.name || '', q.email || '', q.phone || '')
