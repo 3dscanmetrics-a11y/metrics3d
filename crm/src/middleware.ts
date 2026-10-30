@@ -8,6 +8,19 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow scheduled cron triggers for automated invoice reminders via x-cron-secret or Authorization: Bearer
+  if (req.nextUrl.pathname === '/api/cron/invoice-reminders') {
+    const cronSecret = process.env.WEBHOOK_SIGNING_SECRET;
+    const headerSecret =
+      req.headers.get('x-cron-secret') ||
+      (req.headers.get('authorization')?.startsWith('Bearer ')
+        ? req.headers.get('authorization')?.slice(7)
+        : null);
+    if (cronSecret && headerSecret && constantTimeEqual(headerSecret, cronSecret)) {
+      return NextResponse.next();
+    }
+  }
+
   const validUser = process.env.ADMIN_USERNAME;
   const validPass = process.env.ADMIN_PASSWORD;
   if (!validUser || !validPass) {

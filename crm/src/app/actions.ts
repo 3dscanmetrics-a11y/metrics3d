@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db';
 import { mapInvoice, mapLead, toDbStatus } from '@/lib/map';
 import { revalidatePath } from 'next/cache';
 import { randomUUID } from 'crypto';
-import { generateQuotePDF, generateTaxInvoicePDF } from '@/lib/pdf';
+import { generateQuotePDF, generateTaxInvoicePDF, generateClientStatementPDF } from '@/lib/pdf';
 import { Resend } from 'resend';
 import { calculateEstimateRange, DEFAULT_PRICING, formatRange } from '@/lib/pricing';
 import { generateInvoiceLineItems, getLeadBreakdownItems } from '@/lib/financials';
@@ -31,6 +31,17 @@ export async function getInvoices() {
   const db = await getDb();
   const { results: invoiceRows } = await db.prepare('SELECT * FROM invoices ORDER BY created_at DESC').all<Record<string, unknown>>();
   if (!invoiceRows || invoiceRows.length === 0) return [];
+
+  // Load automation logs for invoice reminder tracking & per-invoice auto-remind toggles
+  let logRows: Record<string, unknown>[] = [];
+  try {
+    const resLogs = await db
+      .prepare("SELECT * FROM ai_automation_logs WHERE entity_type = 'invoice' ORDER BY created_at ASC")
+      .all<Record<string, unknown>>();
+    logRows = resLogs.results ?? [];
+  } catch {
+    logRows = [];
+  }
 
   const invoices = [];
   for (const row of invoiceRows) {
@@ -90,6 +101,62 @@ export async function getInvoices() {
       statusStr = 'PARTIAL';
     }
 
+    const createdAtIso = String(row.createdAt || row.created_at || new Date().toISOString());
+    const paymentTermsStr = String(row.paymentTerms || row.payment_terms || client?.payment_terms || client?.paymentTerms || '30 Days');
+
+    // Calculate due date from due_date column or createdAt + paymentTerms
+    let dueDays = 30;
+    const termsLower = paymentTermsStr.toLowerCase();
+    if (termsLower.includes('receipt') || termsLower.includes('due on') || termsLower.includes('cod') || termsLower.includes('50%')) {
+      dueDays = 0;
+    } else if (termsLower.includes('7')) {
+      dueDays = 7;
+    } else if (termsLower.includes('14')) {
+      dueDays = 14;
+    } else if (termsLower.includes('60')) {
+      dueDays = 60;
+    }
+
+    const rawDueDate = String(row.dueDate || row.due_date || '').trim();
+    const createdMs = new Date(createdAtIso).getTime() || Date.now();
+    const dueMs = rawDueDate ? (new Date(rawDueDate).getTime() || (createdMs + dueDays * 86400000)) : (createdMs + dueDays * 86400000);
+    const computedDueDate = new Date(dueMs).toISOString();
+    const daysOverdue = Math.floor((Date.now() - dueMs) / 86400000);
+
+    // Inspect reminder settings & history for this invoice
+    const invLogs = logRows.filter((l) => String(l.entity_id) === invId);
+    const settingLogs = invLogs.filter((l) => String(l.action_type) === 'AUTO_REMIND_SETTING');
+    const latestSetting = settingLogs.length > 0 ? settingLogs[settingLogs.length - 1] : null;
+    const autoRemind = latestSetting ? String(latestSetting.status).toUpperCase() !== 'PAUSED' : true;
+
+    const reminderLogs = invLogs.filter((l) => String(l.action_type) === 'PAYMENT_REMINDER');
+    const reminderCount = reminderLogs.length;
+    const latestReminder = reminderLogs.length > 0 ? reminderLogs[reminderLogs.length - 1] : null;
+    const lastReminderAt = latestReminder ? String(latestReminder.created_at || '') : '';
+    const lastReminderStage = latestReminder ? String(latestReminder.status || '') : '';
+    const sentStages = new Set(reminderLogs.map((l) => String(l.status || '').toUpperCase()));
+
+    let targetStage: string | null = null;
+    if (daysOverdue >= 30) targetStage = 'STAGE_30_DAYS';
+    else if (daysOverdue >= 14) targetStage = 'STAGE_14_DAYS';
+    else if (daysOverdue >= 7) targetStage = 'STAGE_7_DAYS';
+    else if (daysOverdue >= 0) targetStage = 'STAGE_DUE';
+
+    const resolvedEmail = String(client?.email || lead?.email || row.clientEmail || row.client_email || '');
+    const balanceRemaining = Math.max(0, Math.round((invAmount - amountPaid) * 100) / 100);
+    const isUnpaidOrPartial = (statusStr === 'UNPAID' || statusStr === 'PARTIAL') && balanceRemaining > 0;
+    const msSinceLastReminder = lastReminderAt ? Date.now() - (new Date(lastReminderAt).getTime() || 0) : Infinity;
+
+    const nextDueStage =
+      isUnpaidOrPartial &&
+      autoRemind &&
+      Boolean(resolvedEmail) &&
+      targetStage &&
+      !sentStages.has(targetStage) &&
+      msSinceLastReminder > 2 * 86400000
+        ? targetStage
+        : null;
+
     invoices.push({
       ...row,
       id: invId,
@@ -98,18 +165,24 @@ export async function getInvoices() {
       clientName: String(row.client_name || row.clientName || client?.company || lead?.company || client?.name || lead?.name || 'Valued Client'),
       contactName: String(client?.name || lead?.name || row.clientName || row.client_name || 'Valued Client'),
       clientCompany: String(client?.company || lead?.company || row.client_name || row.clientName || ''),
-      clientEmail: String(client?.email || lead?.email || row.clientEmail || row.client_email || ''),
+      clientEmail: resolvedEmail,
       clientPhone: String(client?.phone || client?.mobile || lead?.phone || ''),
       clientAddress: [client?.billing_street || client?.billingStreet, client?.billing_city || client?.billingCity, client?.billing_postal_code || client?.billingPostalCode].filter(Boolean).join(', ') || (lead?.payload as any)?.siteLocation || '',
       clientVat: String(client?.vat_number || client?.vatNumber || client?.tax_number || client?.taxNumber || ''),
       clientReg: String(client?.registration_number || client?.registrationNumber || ''),
-      paymentTerms: String(row.paymentTerms || row.payment_terms || client?.payment_terms || client?.paymentTerms || '30 Days'),
+      paymentTerms: paymentTermsStr,
       project: String(row.project || lead?.project || '3D Laser Scanning Services'),
       amount: invAmount,
       amountPaid,
       status: statusStr,
-      createdAt: String(row.createdAt || row.created_at || new Date().toISOString()),
-      dueDate: String(row.dueDate || row.due_date || ''),
+      createdAt: createdAtIso,
+      dueDate: computedDueDate,
+      daysOverdue,
+      autoRemind,
+      reminderCount,
+      lastReminderAt,
+      lastReminderStage,
+      nextDueStage,
       items,
     });
   }
@@ -550,6 +623,230 @@ export async function recordInvoicePayment(
     .run();
   revalidatePath('/');
   return { success: true, amountPaid: newAmountPaid, status: newStatus };
+}
+
+export async function toggleInvoiceAutoRemind(invoiceId: string, enabled: boolean) {
+  const db = await getDb();
+  await db
+    .prepare("DELETE FROM ai_automation_logs WHERE entity_type = 'invoice' AND entity_id = ? AND action_type = 'AUTO_REMIND_SETTING'")
+    .bind(invoiceId)
+    .run();
+
+  await db
+    .prepare(
+      "INSERT INTO ai_automation_logs (id, entity_type, entity_id, action_type, status, result_json) VALUES (?, 'invoice', ?, 'AUTO_REMIND_SETTING', ?, ?)"
+    )
+    .bind(randomUUID(), invoiceId, enabled ? 'ENABLED' : 'PAUSED', JSON.stringify({ enabled, updatedAt: new Date().toISOString() }))
+    .run();
+
+  revalidatePath('/');
+  return { success: true, autoRemind: enabled };
+}
+
+export async function sendInvoiceReminder(invoiceId: string, stageOverride?: string) {
+  const db = await getDb();
+  const allInvoices = await getInvoices();
+  const inv = allInvoices.find((i: any) => String(i.id) === String(invoiceId));
+  if (!inv) throw new Error('Invoice not found');
+
+  if (!inv.clientEmail) {
+    throw new Error(`Client email address is missing for invoice INV-${String(inv.id).slice(0, 8).toUpperCase()}`);
+  }
+
+  const totalAmount = Number(inv.amount || 0);
+  const paidAmount = Number(inv.amountPaid || 0);
+  const balanceDue = Math.max(0, Math.round((totalAmount - paidAmount) * 100) / 100);
+  if (balanceDue <= 0 || String(inv.status).toUpperCase() === 'PAID') {
+    throw new Error('This invoice is already paid in full.');
+  }
+
+  const daysOverdue = Number(inv.daysOverdue ?? 0);
+  const stage =
+    stageOverride ||
+    (daysOverdue >= 30
+      ? 'STAGE_30_DAYS'
+      : daysOverdue >= 14
+        ? 'STAGE_14_DAYS'
+        : daysOverdue >= 7
+          ? 'STAGE_7_DAYS'
+          : 'STAGE_DUE');
+
+  const invRef = `INV-${String(inv.id).slice(0, 8).toUpperCase()}`;
+  const projectScope = String(inv.project || '3D Laser Scanning Services').trim();
+  const dueDateDisplay = new Date(inv.dueDate || Date.now()).toLocaleDateString('en-ZA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+  const fmtZAR = (val: number) =>
+    new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(val || 0);
+
+  // Build both PDFs: 1) Tax Invoice PDF and 2) Per-Project Statement of Account PDF
+  const invoicePdfBuffer = await generateTaxInvoicePDF(inv);
+
+  const projectInvoices = allInvoices.filter((other: any) => {
+    if (String(other.id) === String(inv.id)) return true;
+    const sameProject = String(other.project || '').trim().toLowerCase() === projectScope.toLowerCase();
+    if (!sameProject) return false;
+    if (inv.clientId && other.clientId && String(inv.clientId) === String(other.clientId)) return true;
+    if (inv.clientEmail && other.clientEmail && String(inv.clientEmail).toLowerCase() === String(other.clientEmail).toLowerCase()) return true;
+    if (inv.clientName && other.clientName && String(inv.clientName).toLowerCase() === String(other.clientName).toLowerCase()) return true;
+    return false;
+  });
+
+  const clientRecord = {
+    id: String(inv.clientId || inv.id),
+    name: String(inv.contactName || inv.clientName || 'Valued Client'),
+    company: String(inv.clientCompany || inv.clientName || ''),
+    accountNumber: `CLI-${String(inv.clientId || inv.id).slice(0, 6).toUpperCase()}`,
+    email: String(inv.clientEmail || ''),
+    phone: String(inv.clientPhone || ''),
+    vatNumber: String(inv.clientVat || ''),
+    billingStreet: String(inv.clientAddress || ''),
+    projectScope,
+  };
+
+  const statementPdfBuffer = await generateClientStatementPDF(clientRecord, projectInvoices, projectScope);
+
+  let subjectLabel = `Payment Reminder: ${invRef} — ${projectScope}`;
+  let headingBadge = 'PAYMENT DUE REMINDER';
+  let introParagraph = `This is a friendly reminder regarding invoice <strong>${invRef}</strong> for project <strong>${projectScope}</strong>, due on <strong>${dueDateDisplay}</strong>.`;
+
+  if (stage === 'STAGE_30_DAYS') {
+    subjectLabel = `URGENT: 30+ Days Overdue Invoice ${invRef} — ${projectScope}`;
+    headingBadge = 'FINAL OVERDUE ACCOUNTING NOTICE (30+ DAYS PAST DUE)';
+    introParagraph = `Our records indicate that invoice <strong>${invRef}</strong> for project <strong>${projectScope}</strong> (due <strong>${dueDateDisplay}</strong>) remains outstanding by more than 30 days. Please arrange urgent settlement or forward proof of payment so we can update your project statement.`;
+  } else if (stage === 'STAGE_14_DAYS') {
+    subjectLabel = `2nd Overdue Notice: Invoice ${invRef} — ${projectScope}`;
+    headingBadge = '2ND OVERDUE PAYMENT FOLLOW-UP (14+ DAYS PAST DUE)';
+    introParagraph = `We are following up regarding invoice <strong>${invRef}</strong> for project <strong>${projectScope}</strong>, which became due on <strong>${dueDateDisplay}</strong>. Please find both your updated Tax Invoice and Project Statement of Account attached.`;
+  } else if (stage === 'STAGE_7_DAYS') {
+    subjectLabel = `Overdue Invoice Reminder: ${invRef} — ${projectScope}`;
+    headingBadge = '1ST OVERDUE PAYMENT REMINDER (7+ DAYS PAST DUE)';
+    introParagraph = `This is a polite follow-up that invoice <strong>${invRef}</strong> for project <strong>${projectScope}</strong> (due <strong>${dueDateDisplay}</strong>) has an outstanding balance. We have attached both the Invoice and your Project Statement of Account for your convenience.`;
+  }
+
+  const safeProject = projectScope.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const safeClient = String(inv.clientCompany || inv.clientName || 'Client').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  if (process.env.RESEND_API_KEY) {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: '3D Scan Metrics <isaiah@3dscanmetrics.co.za>',
+      to: inv.clientEmail,
+      cc: ['isaiah@3dscanmetrics.co.za'],
+      subject: subjectLabel,
+      html: `
+        <div style="font-family: sans-serif; max-width: 620px; margin: 0 auto; color: #0f172a; line-height: 1.6;">
+          <div style="background: #0f172a; color: #ffffff; padding: 16px 20px; border-radius: 10px 10px 0 0;">
+            <div style="font-size: 11px; font-weight: 700; color: #fb923c; letter-spacing: 0.06em;">${headingBadge}</div>
+            <div style="font-size: 18px; font-weight: 800; margin-top: 4px;">3D Scan Metrics Laser Scanning</div>
+          </div>
+          <div style="border: 1px solid #e2e8f0; border-top: none; padding: 22px 20px; border-radius: 0 0 10px 10px;">
+            <p>Dear ${inv.contactName || inv.clientName},</p>
+            <p>${introParagraph}</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 13px; background: #f8fafc; border-radius: 8px; overflow: hidden;">
+              <tr>
+                <td style="padding: 8px 12px; color: #475569;">Invoice Reference:</td>
+                <td style="padding: 8px 12px; font-weight: 700; text-align: right;">${invRef}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 12px; color: #475569;">Project Scope:</td>
+                <td style="padding: 8px 12px; font-weight: 700; text-align: right;">${projectScope}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 12px; color: #475569;">Due Date:</td>
+                <td style="padding: 8px 12px; font-weight: 700; text-align: right;">${dueDateDisplay}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 12px; color: #475569;">Total Invoiced:</td>
+                <td style="padding: 8px 12px; font-weight: 700; text-align: right;">${fmtZAR(totalAmount)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 12px; color: #059669;">Payments / Deposits Received:</td>
+                <td style="padding: 8px 12px; font-weight: 700; color: #059669; text-align: right;">${fmtZAR(paidAmount)}</td>
+              </tr>
+              <tr style="border-top: 1px solid #cbd5e1; background: #fff7ed;">
+                <td style="padding: 10px 12px; font-weight: 800; color: #9a3412;">Net Balance Outstanding:</td>
+                <td style="padding: 10px 12px; font-weight: 800; color: #9a3412; text-align: right; font-size: 15px;">${fmtZAR(balanceDue)}</td>
+              </tr>
+            </table>
+            <div style="background: #f1f5f9; padding: 12px 14px; border-radius: 8px; font-size: 12px; color: #334155;">
+              <strong>Banking Details:</strong> First National Bank (FNB) &bull; Account Name: Freelance Geomatics ZA (Pty) Ltd &bull; Account No: <strong>62909760185</strong> &bull; Branch: <strong>250655</strong> &bull; Reference: <strong>${invRef}</strong>
+            </div>
+            <p style="font-size: 12px; color: #64748b; margin-top: 16px;">
+              If payment has already been made, please disregard this notice or reply with your proof of payment.
+            </p>
+            <p style="margin-top: 18px; font-size: 13px;">Kind regards,<br/><strong>Isaiah Mpofu</strong><br/>3D Scan Metrics Laser Scanning<br/>+27 82 733 6873 | isaiah@3dscanmetrics.co.za</p>
+          </div>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: `Tax_Invoice_${invRef}_${safeProject}.pdf`,
+          content: invoicePdfBuffer,
+        },
+        {
+          filename: `Statement_${safeClient}_${safeProject}.pdf`,
+          content: statementPdfBuffer,
+        },
+      ],
+    });
+  }
+
+  const nowIso = new Date().toISOString();
+  await db
+    .prepare(
+      "INSERT INTO ai_automation_logs (id, entity_type, entity_id, action_type, status, result_json, created_at) VALUES (?, 'invoice', ?, 'PAYMENT_REMINDER', ?, ?, ?)"
+    )
+    .bind(
+      randomUUID(),
+      invoiceId,
+      stage,
+      JSON.stringify({ stage, to: inv.clientEmail, balanceDue, project: projectScope, sentAt: nowIso }),
+      nowIso
+    )
+    .run();
+
+  revalidatePath('/');
+  return {
+    success: true,
+    invoiceId,
+    stage,
+    sentAt: nowIso,
+    to: inv.clientEmail,
+    balanceDue,
+  };
+}
+
+export async function runAutomatedInvoiceReminders() {
+  const allInvoices = await getInvoices();
+  const eligible = allInvoices.filter((inv: any) => Boolean(inv.nextDueStage));
+  const dispatched: Array<{ invoiceId: string; clientName: string; project: string; stage: string; balanceDue: number }> = [];
+
+  for (const inv of eligible) {
+    try {
+      const res = await sendInvoiceReminder(String(inv.id), String(inv.nextDueStage));
+      dispatched.push({
+        invoiceId: String(inv.id),
+        clientName: String(inv.clientName),
+        project: String(inv.project),
+        stage: res.stage,
+        balanceDue: res.balanceDue,
+      });
+    } catch (err) {
+      console.error(`[AutoReminder] Failed for invoice ${inv.id}:`, err);
+    }
+  }
+
+  revalidatePath('/');
+  return {
+    success: true,
+    checkedCount: allInvoices.length,
+    eligibleCount: eligible.length,
+    sentCount: dispatched.length,
+    dispatched,
+  };
 }
 
 export async function getClients() {

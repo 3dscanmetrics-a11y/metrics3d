@@ -16,6 +16,8 @@ import {
   X,
   DollarSign,
   CreditCard,
+  Bell,
+  BellOff,
 } from 'lucide-react';
 import {
   updateInvoice,
@@ -25,6 +27,9 @@ import {
   deleteInvoice,
   markInvoicePaid,
   recordInvoicePayment,
+  toggleInvoiceAutoRemind,
+  sendInvoiceReminder,
+  runAutomatedInvoiceReminders,
 } from '../app/actions';
 import { ClientRecord } from './ClientManagement';
 import SendEmailModal from './SendEmailModal';
@@ -55,6 +60,12 @@ export interface InvoiceRecord {
   status: string;
   createdAt: string;
   dueDate?: string;
+  daysOverdue?: number;
+  autoRemind?: boolean;
+  reminderCount?: number;
+  lastReminderAt?: string;
+  lastReminderStage?: string;
+  nextDueStage?: string | null;
   items?: InvoiceItem[];
 }
 
@@ -126,14 +137,43 @@ export default function InvoiceManagement({
         (inv.project || '').toLowerCase().includes(search.toLowerCase()) ||
         (inv.id || '').toLowerCase().includes(search.toLowerCase());
 
+      const isPaidStatus = (inv.status || '').toUpperCase() === 'PAID';
+      const isOverdueInv = !isPaidStatus && Number(inv.daysOverdue || 0) > 0;
+
       const matchStatus =
         statusFilter === 'ALL'
           ? true
-          : (inv.status || '').toUpperCase() === statusFilter.toUpperCase();
+          : statusFilter === 'OVERDUE'
+            ? isOverdueInv || (inv.status || '').toUpperCase() === 'OVERDUE'
+            : (inv.status || '').toUpperCase() === statusFilter.toUpperCase();
 
       return matchSearch && matchStatus;
     });
   }, [invoices, search, statusFilter]);
+
+  const dueRemindersCount = useMemo(
+    () => invoices.filter((i) => Boolean(i.nextDueStage)).length,
+    [invoices]
+  );
+
+  // Automatically trigger scheduled overdue reminders once per session when due
+  useEffect(() => {
+    if (dueRemindersCount <= 0) return;
+    const sessionKey = `auto_remind_checked_${new Date().toISOString().slice(0, 10)}`;
+    if (typeof window !== 'undefined' && sessionStorage.getItem(sessionKey)) return;
+    if (typeof window !== 'undefined') sessionStorage.setItem(sessionKey, '1');
+
+    runAutomatedInvoiceReminders()
+      .then((res) => {
+        if (res.sentCount > 0) {
+          setMessage(
+            `Automated Reminder Engine: Dispatched ${res.sentCount} scheduled overdue invoice reminder(s) with Invoice & Project Statement PDFs.`
+          );
+          router.refresh();
+        }
+      })
+      .catch((err) => console.error('[AutoReminder Check]', err));
+  }, [dueRemindersCount, router]);
 
   // Financial Metrics
   const metrics = useMemo(() => {
@@ -308,6 +348,76 @@ export default function InvoiceManagement({
     }
   }
 
+  // Handle Manual Payment Reminder (attaches Invoice PDF + Project Statement PDF)
+  async function handleSendReminderNow(inv: InvoiceRecord) {
+    setSendingId(inv.id);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await sendInvoiceReminder(inv.id);
+      setInvoices((prev) =>
+        prev.map((row) =>
+          row.id === inv.id
+            ? {
+                ...row,
+                reminderCount: Number(row.reminderCount || 0) + 1,
+                lastReminderAt: res.sentAt,
+                lastReminderStage: res.stage,
+                nextDueStage: null,
+              }
+            : row
+        )
+      );
+      setMessage(
+        `Payment reminder sent to ${res.to} for INV-${inv.id.slice(0, 8).toUpperCase()} (attached Invoice PDF + Project Statement PDF).`
+      );
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message || 'Failed to send payment reminder');
+    } finally {
+      setSendingId(null);
+    }
+  }
+
+  // Handle Toggle Auto-Remind per invoice
+  async function handleToggleAutoRemind(inv: InvoiceRecord) {
+    const nextVal = !(inv.autoRemind !== false);
+    setInvoices((prev) =>
+      prev.map((row) => (row.id === inv.id ? { ...row, autoRemind: nextVal } : row))
+    );
+    try {
+      await toggleInvoiceAutoRemind(inv.id, nextVal);
+      setMessage(
+        `Automated reminders ${nextVal ? 'ENABLED' : 'PAUSED'} for INV-${inv.id.slice(0, 8).toUpperCase()} (${inv.project}).`
+      );
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message || 'Failed to update auto-remind setting');
+    }
+  }
+
+  // Handle Run All Due Reminders
+  async function handleRunDueReminders() {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await runAutomatedInvoiceReminders();
+      if (res.sentCount > 0) {
+        setMessage(
+          `Dispatched ${res.sentCount} due invoice reminder(s) with Invoice & Project Statement PDFs attached!`
+        );
+      } else {
+        setMessage('All unpaid/partially paid invoices are up to date on their reminder schedule.');
+      }
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message || 'Failed to run automated reminders');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Handle Duplicate
   async function handleDuplicate(invId: string) {
     setLoading(true);
@@ -372,16 +482,31 @@ export default function InvoiceManagement({
           <div className="text-[10px] text-amber-600 font-medium mt-0.5">Outstanding Invoices</div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between">
-          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Quick Actions</div>
-          <button
-            type="button"
-            onClick={() => setIsCreatingNew(true)}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create New Invoice</span>
-          </button>
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between gap-2">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Quick Actions & Automation</div>
+          <div className="flex flex-col gap-1.5">
+            <button
+              type="button"
+              onClick={() => setIsCreatingNew(true)}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Create New Invoice</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleRunDueReminders}
+              disabled={loading}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg text-[11px] transition-colors flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+            >
+              <Bell className="w-3.5 h-3.5 text-amber-400" />
+              <span>
+                {dueRemindersCount > 0
+                  ? `Send Due Reminders (${dueRemindersCount})`
+                  : 'Run Overdue Reminder Check'}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -456,7 +581,7 @@ export default function InvoiceManagement({
                 Amount (ZAR)
               </th>
               <th className="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Date Issued
+                Issued & Due Date
               </th>
               <th className="px-6 py-3.5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">
                 QuickBooks Actions
@@ -469,24 +594,49 @@ export default function InvoiceManagement({
               const isPaid = (inv.status || '').toUpperCase() === 'PAID';
               const isPartial = (inv.status || '').toUpperCase() === 'PARTIAL' || (inv.status || '').toUpperCase() === 'PARTIALLY PAID';
               const amountPaid = Number(inv.amountPaid || 0);
+              const daysOverdue = Number(inv.daysOverdue || 0);
+              const isOverdue = !isPaid && daysOverdue > 0;
+              const autoRemindEnabled = inv.autoRemind !== false;
+              const reminderCount = Number(inv.reminderCount || 0);
 
               return (
                 <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="font-mono font-bold text-gray-900">{invNo}</div>
-                    <span
-                      className={`inline-block mt-1 px-2.5 py-0.5 text-[10px] font-extrabold rounded-full ${
-                        isPaid
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : isPartial || (amountPaid > 0 && !isPaid)
-                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                          : (inv.status || '').toUpperCase() === 'OVERDUE'
-                          ? 'bg-rose-100 text-rose-800'
-                          : 'bg-slate-100 text-slate-800'
-                      }`}
-                    >
-                      {isPartial || (amountPaid > 0 && !isPaid) ? 'PARTIALLY PAID' : (inv.status || 'UNPAID').toUpperCase()}
-                    </span>
+                    <div className="flex items-center space-x-1.5 mt-1">
+                      <span
+                        className={`inline-block px-2.5 py-0.5 text-[10px] font-extrabold rounded-full ${
+                          isPaid
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : isPartial || (amountPaid > 0 && !isPaid)
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE'
+                            ? 'bg-rose-100 text-rose-800'
+                            : 'bg-slate-100 text-slate-800'
+                        }`}
+                      >
+                        {isPartial || (amountPaid > 0 && !isPaid) ? 'PARTIALLY PAID' : (inv.status || 'UNPAID').toUpperCase()}
+                      </span>
+                      {!isPaid && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAutoRemind(inv)}
+                          title={
+                            autoRemindEnabled
+                              ? 'Automated Overdue Reminders are ON (Click to Pause)'
+                              : 'Automated Overdue Reminders are PAUSED (Click to Enable)'
+                          }
+                          className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
+                            autoRemindEnabled
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                              : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                          }`}
+                        >
+                          {autoRemindEnabled ? <Bell className="w-2.5 h-2.5" /> : <BellOff className="w-2.5 h-2.5" />}
+                          <span>{autoRemindEnabled ? 'Auto: ON' : 'Auto: OFF'}</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="font-semibold text-gray-900">{inv.clientName}</div>
@@ -502,7 +652,26 @@ export default function InvoiceManagement({
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                    {new Date(inv.createdAt).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    <div>
+                      Issued: {new Date(inv.createdAt).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </div>
+                    {inv.dueDate && !isPaid && (
+                      <div className="text-[11px] mt-0.5 flex items-center space-x-1.5">
+                        <span className={isOverdue ? 'text-rose-700 font-bold' : 'text-gray-500'}>
+                          Due: {new Date(inv.dueDate).toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' })}
+                        </span>
+                        {isOverdue && (
+                          <span className="bg-rose-100 text-rose-800 px-1.5 py-0.2 rounded text-[9px] font-extrabold">
+                            {daysOverdue}d OVERDUE
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {reminderCount > 0 && (
+                      <div className="text-[10px] text-blue-700 font-semibold mt-0.5">
+                        {reminderCount} {reminderCount === 1 ? 'reminder' : 'reminders'} sent
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-xs font-medium">
                     <div className="flex items-center justify-end space-x-1.5">
@@ -549,6 +718,20 @@ export default function InvoiceManagement({
                       >
                         <Mail className="w-3.5 h-3.5" />
                       </button>
+
+                      {/* Send Payment Reminder (attaches Invoice PDF + Project Statement PDF) */}
+                      {!isPaid && (
+                        <button
+                          type="button"
+                          disabled={sendingId === inv.id}
+                          onClick={() => handleSendReminderNow(inv)}
+                          title="Send Payment Reminder Email (with Invoice PDF + Project Statement PDF attached)"
+                          className="bg-orange-50 hover:bg-orange-100 text-orange-800 font-bold border border-orange-200 px-2 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex items-center space-x-1 disabled:opacity-50"
+                        >
+                          <Bell className="w-3.5 h-3.5 text-orange-600" />
+                          <span>{sendingId === inv.id ? 'Sending...' : 'Remind'}</span>
+                        </button>
+                      )}
 
                       {/* Record / Update Partial Payment */}
                       <button
