@@ -90,7 +90,11 @@ export function getLeadBreakdownItems(lead: any): LineItem[] {
     deliverables: delivList,
     access: lead.access || payloadObj.access,
     accuracy: lead.accuracy || payloadObj.accuracy,
-    bimLevel: lead.bimLevel || payloadObj.bimLevel,
+    bimLevel: lead.bimLevel || payloadObj.bimLevel || payloadObj.lod,
+    systems: lead.systems || payloadObj.systems,
+    areaUnknown: Boolean(lead.areaUnknown ?? payloadObj.areaUnknown),
+    areaBucket: Number(lead.areaBucket || payloadObj.areaBucket || lead.area) || undefined,
+    travelAccommodationCost: Number(lead.travelAccommodationCost || payloadObj.travelAccommodationCost || payloadObj.travelCost || 0),
     distanceKm: Number(lead.distanceKm || payloadObj.distanceKm || 0),
     finalPrice: Number(lead.quoteTotal) || 0,
   });

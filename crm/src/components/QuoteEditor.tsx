@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle, XCircle, FileText, Send, RotateCcw, User, MapPin, Calculator, ListPlus, Plus, Trash2, Save } from 'lucide-react';
-import { calculateEstimateRange, DEFAULT_PRICING, formatZAR } from '@/lib/pricing';
-import { rejectLead, saveLeadQuote, sendFormalQuote } from '../app/actions';
+import { CheckCircle, XCircle, FileText, Send, RotateCcw, User, Calculator, ListPlus, Plus, Trash2, Save } from 'lucide-react';
+import { AREA_BUCKETS, calculateEstimateRange, DEFAULT_PRICING, formatZAR } from '@/lib/pricing';
+import { rejectLead, saveLeadQuote } from '../app/actions';
 import SendEmailModal from './SendEmailModal';
 
 const COMPLEXITY = [
@@ -25,6 +25,12 @@ const ACCESS = [
 const ACCURACY = ['Standard', 'High Precision'];
 const LOD = ['100', '200', '300', '400'];
 const DELIVS = ['raw', 'viewer', 'cad', 'topo', 'bim'];
+const SYSTEMS = [
+  { id: 'architectural', label: 'Architectural (Base)' },
+  { id: 'structural', label: 'Structural (+25%)' },
+  { id: 'mep', label: 'MEP (+45%)' },
+  { id: 'site', label: 'Site / Civil (+15%)' },
+];
 
 type LeadProps = {
   id: string;
@@ -84,6 +90,33 @@ function normalizeComplexity(c: string): string {
   return 'Commercial/Retail/Residential';
 }
 
+function normalizeAccess(a: string): string {
+  if (!a) return ACCESS[0];
+  const lower = a.toLowerCase();
+  if (lower.includes('after-hours') || lower.includes('weekend')) return ACCESS[1];
+  if (lower.includes('security') || lower.includes('escort')) return ACCESS[2];
+  if (lower.includes('operational') || lower.includes('plant') || lower.includes('mine')) return ACCESS[3];
+  return ACCESS[0];
+}
+
+function parseSystems(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    const arr = raw.map((s) => String(s).toLowerCase().trim()).filter(Boolean);
+    return arr.length > 0 ? arr : ['architectural'];
+  }
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((s) => String(s).toLowerCase().trim());
+      }
+    } catch {
+      return [raw.toLowerCase().trim()];
+    }
+  }
+  return ['architectural'];
+}
+
 export default function QuoteEditor({ lead, onSaveSuccess }: { lead: LeadProps; onSaveSuccess?: () => void }) {
   const router = useRouter();
   const payload = lead.payload || {};
@@ -106,11 +139,16 @@ export default function QuoteEditor({ lead, onSaveSuccess }: { lead: LeadProps; 
   );
 
   const [area, setArea] = useState(Number(lead.area) || 0);
+  const [areaUnknown, setAreaUnknown] = useState<boolean>(Boolean(payload.areaUnknown));
+  const [areaBucket, setAreaBucket] = useState<number>(
+    Number(payload.areaBucket) || (AREA_BUCKETS[Number(lead.area)] ? Number(lead.area) : 5000)
+  );
   const [complexity, setComplexity] = useState(normalizeComplexity(lead.complexity));
-  const [access, setAccess] = useState(String(payload.access || ACCESS[0]));
+  const [access, setAccess] = useState(normalizeAccess(String(payload.access || ACCESS[0])));
   const [accuracy, setAccuracy] = useState(String(payload.accuracy || 'Standard'));
   const [bimLevel, setBimLevel] = useState(String(payload.bimLevel || payload.lod || '300'));
-  
+  const [systems, setSystems] = useState<string[]>(parseSystems(payload.systems));
+
   const parsedDelivs = useMemo(() => {
     const fromLead = parseDelivs(lead.deliverables);
     if (fromLead.length > 0) return fromLead;
@@ -120,7 +158,7 @@ export default function QuoteEditor({ lead, onSaveSuccess }: { lead: LeadProps; 
   }, [lead.deliverables, payload.deliverables]);
 
   const [deliverables, setDeliverables] = useState<string[]>(parsedDelivs);
-  
+
   const [isManualFirmAmount, setIsManualFirmAmount] = useState<boolean>(
     Boolean(payload.isManualFirmAmount)
   );
@@ -136,15 +174,18 @@ export default function QuoteEditor({ lead, onSaveSuccess }: { lead: LeadProps; 
   const range = useMemo(
     () =>
       calculateEstimateRange(DEFAULT_PRICING, {
-        area,
+        area: areaUnknown ? areaBucket : area,
         complexity,
         deliverables,
         access,
         accuracy,
         bimLevel,
+        systems,
+        areaUnknown,
+        areaBucket: areaUnknown ? areaBucket : undefined,
         travelAccommodationCost,
       }),
-    [area, complexity, deliverables, access, accuracy, bimLevel, travelAccommodationCost]
+    [area, areaUnknown, areaBucket, complexity, deliverables, access, accuracy, bimLevel, systems, travelAccommodationCost]
   );
 
   // Dynamic calculation of effective firm amount:
@@ -220,6 +261,10 @@ export default function QuoteEditor({ lead, onSaveSuccess }: { lead: LeadProps; 
     setDeliverables((prev) => (prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]));
   }
 
+  function toggleSystem(id: string) {
+    setSystems((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
+  }
+
   function appendForm(fd: FormData) {
     fd.set('id', lead.id);
     fd.set('mode', mode);
@@ -230,11 +275,14 @@ export default function QuoteEditor({ lead, onSaveSuccess }: { lead: LeadProps; 
     fd.set('phone', phone);
     fd.set('travelAccommodationCost', String(travelAccommodationCost));
     fd.set('travelCost', String(travelAccommodationCost));
-    fd.set('area', String(area));
+    fd.set('area', String(areaUnknown ? areaBucket : area));
+    fd.set('areaUnknown', String(areaUnknown));
+    fd.set('areaBucket', String(areaBucket));
     fd.set('complexity', complexity);
     fd.set('access', access);
     fd.set('accuracy', accuracy);
     fd.set('bimLevel', bimLevel);
+    fd.set('systems', JSON.stringify(systems));
     fd.set('deliverables', JSON.stringify(deliverables));
     fd.set('isManualFirmAmount', String(isManualFirmAmount));
     fd.set('firmAmount', String(effectiveTotal));
@@ -353,15 +401,54 @@ export default function QuoteEditor({ lead, onSaveSuccess }: { lead: LeadProps; 
       {mode === 'calculator' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-600">
-              Area (sqm)
-              <input
-                type="number"
-                className="mt-1 w-full border rounded-lg px-3 py-3 md:py-2 text-base md:text-sm bg-white"
-                value={area}
-                onChange={(e) => setArea(Number(e.target.value))}
-              />
-            </label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-medium text-gray-600">Area (sqm)</label>
+                <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={areaUnknown}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setAreaUnknown(checked);
+                      if (checked) {
+                        const b = AREA_BUCKETS[area] ? area : areaBucket || 5000;
+                        setAreaBucket(b);
+                        setArea(b);
+                      }
+                    }}
+                  />
+                  <span>Unknown Size Bucket</span>
+                </label>
+              </div>
+
+              {areaUnknown ? (
+                <select
+                  className="w-full border border-amber-300 rounded-lg px-3 py-2 text-xs font-semibold bg-amber-50/40 text-gray-900"
+                  value={areaBucket}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setAreaBucket(val);
+                    setArea(val);
+                  }}
+                >
+                  <option value={100}>Small Bucket (50 – 150 sqm, Mid: 100 sqm)</option>
+                  <option value={300}>Medium Bucket (150 – 600 sqm, Mid: 300 sqm)</option>
+                  <option value={1000}>Large Bucket (600 – 2,500 sqm, Mid: 1,000 sqm)</option>
+                  <option value={5000}>Massive Bucket (2,500 – 15,000 sqm, Mid: 5,000 sqm)</option>
+                </select>
+              ) : (
+                <input
+                  type="number"
+                  className="w-full border rounded-lg px-3 py-3 md:py-2 text-base md:text-sm bg-white"
+                  value={area}
+                  onChange={(e) => {
+                    setAreaUnknown(false);
+                    setArea(Number(e.target.value));
+                  }}
+                />
+              )}
+            </div>
 
             <label className="block text-xs font-medium text-gray-600 mt-3">
               Complexity
@@ -434,20 +521,38 @@ export default function QuoteEditor({ lead, onSaveSuccess }: { lead: LeadProps; 
             </div>
 
             {deliverables.includes('bim') && (
-              <label className="block text-xs font-medium text-gray-600 mt-3">
-                BIM LOD ×{range.breakdown.lodMult}
-                <select
-                  className="mt-1 w-full border rounded-lg px-3 py-3 md:py-2 text-base md:text-sm bg-white"
-                  value={bimLevel}
-                  onChange={(e) => setBimLevel(e.target.value)}
-                >
-                  {LOD.map((c) => (
-                    <option key={c} value={c}>
-                      LOD {c}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <>
+                <label className="block text-xs font-medium text-gray-600 mt-3">
+                  BIM LOD ×{range.breakdown.lodMult}
+                  <select
+                    className="mt-1 w-full border rounded-lg px-3 py-3 md:py-2 text-base md:text-sm bg-white"
+                    value={bimLevel}
+                    onChange={(e) => setBimLevel(e.target.value)}
+                  >
+                    {LOD.map((c) => (
+                      <option key={c} value={c}>
+                        LOD {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="mt-2.5">
+                  <p className="text-xs font-medium text-gray-600 mb-1">BIM Disciplines Modeled</p>
+                  <div className="flex flex-wrap gap-2">
+                    {SYSTEMS.map((sys) => (
+                      <label key={sys.id} className="text-[11px] flex items-center gap-1 border rounded px-2 py-1 bg-white cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={systems.includes(sys.id)}
+                          onChange={() => toggleSystem(sys.id)}
+                        />
+                        {sys.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
 
             <div className="mt-4 text-xs text-gray-500 space-y-1 p-4 bg-white rounded-lg border border-gray-100 shadow-xs">

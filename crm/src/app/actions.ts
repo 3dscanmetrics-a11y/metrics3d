@@ -1295,6 +1295,12 @@ function quoteFromForm(formData: FormData) {
   } catch {
     deliverables = [];
   }
+  let systems: string[] = [];
+  try {
+    systems = JSON.parse(String(formData.get('systems') || '[]'));
+  } catch {
+    systems = [];
+  }
   const mode = String(formData.get('mode') || 'calculator') as 'calculator' | 'custom';
   let customItems: Array<{ description: string; quantity: number; unitPrice: number; total: number }> = [];
   try {
@@ -1309,6 +1315,8 @@ function quoteFromForm(formData: FormData) {
   const phone = String(formData.get('phone') || '').trim();
   const travelAccommodationCost = Number(formData.get('travelAccommodationCost') || formData.get('travelCost')) || 0;
   const area = Number(formData.get('area'));
+  const areaUnknown = String(formData.get('areaUnknown') || '') === 'true';
+  const areaBucket = Number(formData.get('areaBucket') || area) || undefined;
   const complexity = String(formData.get('complexity') || '');
   const access = String(formData.get('access') || '');
   const accuracy = String(formData.get('accuracy') || 'Standard');
@@ -1318,11 +1326,14 @@ function quoteFromForm(formData: FormData) {
 
   const range = calculateEstimateRange(DEFAULT_PRICING, {
     area,
+    areaUnknown,
+    areaBucket,
     complexity,
     deliverables,
     access,
     accuracy,
     bimLevel,
+    systems,
     travelAccommodationCost,
   });
 
@@ -1331,7 +1342,7 @@ function quoteFromForm(formData: FormData) {
     firm = customItems.reduce((sum, item) => sum + (Number(item.total || (item.quantity * item.unitPrice)) || 0), 0);
   }
 
-  return { mode, customItems, name, email, company, phone, travelAccommodationCost, area, complexity, access, accuracy, bimLevel, deliverables, range, firm, isManualFirmAmount };
+  return { mode, customItems, name, email, company, phone, travelAccommodationCost, area, areaUnknown, areaBucket, complexity, access, accuracy, bimLevel, systems, deliverables, range, firm, isManualFirmAmount };
 }
 
 async function persistLeadQuote(
@@ -1346,6 +1357,9 @@ async function persistLeadQuote(
     isManualFirmAmount: q.isManualFirmAmount,
     firmAmount: q.firm,
     deliverables: q.deliverables,
+    systems: q.systems,
+    areaUnknown: q.areaUnknown,
+    areaBucket: q.areaBucket,
     phone: q.phone,
     mode: q.mode,
     customItems: q.customItems,
@@ -1374,7 +1388,7 @@ async function persistLeadQuote(
       JSON.stringify(q.deliverables),
       JSON.stringify(payload),
       q.firm,
-      formatRange(q.firm, q.firm),
+      originalFormatted || q.range.formatted,
       q.range.fieldDays,
       q.range.processDays,
       id

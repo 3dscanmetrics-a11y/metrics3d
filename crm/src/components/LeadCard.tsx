@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { Briefcase, ChevronDown, Clock, Ruler, Settings, Trash2 } from 'lucide-react';
 import QuoteEditor from './QuoteEditor';
 import { acceptQuoteAndGenerateInvoice, deleteLead } from '../app/actions';
-import { calculateEstimateRange, DEFAULT_PRICING } from '@/lib/pricing';
+import { AREA_BUCKETS, calculateEstimateRange, DEFAULT_PRICING } from '@/lib/pricing';
 
 type Lead = {
   id: string;
@@ -24,10 +24,6 @@ type Lead = {
   createdAt: string;
   fieldDays: number;
 };
-
-function formatZAR(val: number) {
-  return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(val || 0);
-}
 
 function deliverableList(raw: unknown) {
   let list: string[] = [];
@@ -91,26 +87,41 @@ export default function LeadCard({ lead, defaultOpen = false }: { lead: Lead; de
       setDeleting(false);
     }
   }
-  
-  const displayRange = useMemo(() => {
-    const payload = lead.payload || {};
+
+  const payload = lead.payload || {};
+  const isAreaUnknown = Boolean(payload.areaUnknown);
+  const bucketKey = Number(payload.areaBucket || lead.area);
+  const areaBucketInfo = isAreaUnknown ? AREA_BUCKETS[bucketKey] : null;
+
+  const calc = useMemo(() => {
+    const p = lead.payload || {};
     const delivs = parseDelivsArray(lead.deliverables).length
       ? parseDelivsArray(lead.deliverables)
-      : Array.isArray(payload.deliverables)
-      ? (payload.deliverables as string[])
+      : Array.isArray(p.deliverables)
+      ? (p.deliverables as string[])
       : ['raw'];
-    
-    const calc = calculateEstimateRange(DEFAULT_PRICING, {
+
+    return calculateEstimateRange(DEFAULT_PRICING, {
       area: Number(lead.area) || 0,
       complexity: lead.complexity || 'Commercial/Retail/Residential',
       deliverables: delivs,
-      access: String(payload.access || 'Standard business hours only'),
-      accuracy: String(payload.accuracy || 'Standard'),
-      bimLevel: String(payload.bimLevel || payload.lod || '300'),
+      access: String(p.access || 'Standard business hours only'),
+      accuracy: String(p.accuracy || 'Standard'),
+      bimLevel: String(p.bimLevel || p.lod || '300'),
+      systems: p.systems as string[] | string | undefined,
+      areaUnknown: Boolean(p.areaUnknown),
+      areaBucket: p.areaBucket ? Number(p.areaBucket) : Number(lead.area) || undefined,
     });
-
-    return calc.formatted;
   }, [lead]);
+
+  const displayRange = useMemo(() => {
+    const publicEst = typeof payload.publicEstimate === 'string' ? payload.publicEstimate.trim() : '';
+    if (publicEst) return publicEst;
+    if (lead.estimateFormatted && lead.estimateFormatted.includes('–')) return lead.estimateFormatted;
+    return calc.formatted;
+  }, [payload.publicEstimate, lead.estimateFormatted, calc.formatted]);
+
+  const effectiveFieldDays = lead.fieldDays && lead.fieldDays > 0 ? lead.fieldDays : calc.fieldDays;
 
   const statusClass =
     lead.status === 'PENDING'
@@ -169,6 +180,11 @@ export default function LeadCard({ lead, defaultOpen = false }: { lead: Lead; de
                 <p>
                   <span className="font-semibold text-gray-900">Email:</span> {lead.email}
                 </p>
+                {Boolean(payload.location || payload.site_location) && (
+                  <p>
+                    <span className="font-semibold text-gray-900">Location:</span> {String(payload.location || payload.site_location)}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -177,11 +193,22 @@ export default function LeadCard({ lead, defaultOpen = false }: { lead: Lead; de
                 <Settings className="w-4 h-4 mr-1 text-orange-600" /> Website Scoping Parameters
               </h4>
               <ul className="space-y-3 text-sm">
-                <li className="flex justify-between">
-                  <span className="text-gray-500 flex items-center">
+                <li className="flex justify-between items-start gap-2">
+                  <span className="text-gray-500 flex items-center shrink-0">
                     <Ruler className="w-4 h-4 mr-2" /> Area
                   </span>
-                  <span className="font-medium text-gray-900">{lead.area} sqm</span>
+                  <div className="text-right">
+                    <span className="font-medium text-gray-900">
+                      {isAreaUnknown && areaBucketInfo
+                        ? `${areaBucketInfo.min.toLocaleString('en-ZA')} – ${areaBucketInfo.max.toLocaleString('en-ZA')} sqm`
+                        : `${lead.area} sqm`}
+                    </span>
+                    {isAreaUnknown && (
+                      <div className="text-[11px] text-amber-700 font-semibold">
+                        Unknown size bucket (Mid: {lead.area} sqm)
+                      </div>
+                    )}
+                  </div>
                 </li>
                 <li className="flex justify-between">
                   <span className="text-gray-500 flex items-center">
@@ -199,7 +226,7 @@ export default function LeadCard({ lead, defaultOpen = false }: { lead: Lead; de
                   <span className="text-gray-500 flex items-center">
                     <Clock className="w-4 h-4 mr-2" /> Est. Field Time
                   </span>
-                  <span className="font-medium text-gray-900">{lead.fieldDays} Days</span>
+                  <span className="font-medium text-gray-900">{effectiveFieldDays} Days</span>
                 </li>
               </ul>
               <div className="mt-6 p-4 bg-white rounded-lg border border-orange-200 shadow-xs">

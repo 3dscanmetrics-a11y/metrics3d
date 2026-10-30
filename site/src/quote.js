@@ -55,14 +55,20 @@ export async function handleQuote(request, env, ctx) {
       areaBucket: body.areaBucket || (body.areaUnknown ? area : undefined),
     });
     const leadId = crypto.randomUUID();
-    const payload = { ...body, publicEstimate: estimate.formatted };
+    const payload = {
+      ...body,
+      publicEstimate: estimate.formatted,
+      publicLow: estimate.low,
+      publicMid: estimate.mid,
+      publicHigh: estimate.high,
+    };
 
     await env.DB.prepare(
       `INSERT INTO leads (
         id, email, phone, project, company, contact_name, site_location,
         area, complexity, deliverables_json, payload_json,
-        estimate_zar, estimate_formatted, estimate_low, estimate_high, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`
+        estimate_zar, estimate_formatted, estimate_low, estimate_high, field_days, process_days, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`
     )
       .bind(
         leadId,
@@ -79,7 +85,9 @@ export async function handleQuote(request, env, ctx) {
         estimate.mid,
         estimate.formatted,
         estimate.low,
-        estimate.high
+        estimate.high,
+        estimate.fieldDays,
+        estimate.processDays
       )
       .run();
 

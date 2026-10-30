@@ -250,7 +250,7 @@ export function calculatePoint(config: PricingConfig, input: QuoteInput) {
         amount: 0,
       });
     } else if (isBimDeliverable(id)) {
-      const bimCost = rawAreaCost * (1.2 * lodMult) * accuracyMult;
+      const bimCost = rawAreaCost * (1.2 * disciplineMult * lodMult) * accuracyMult;
       deliverableLines.push({
         label: `Deliverable: 3D BIM Model (.RVT) - LOD ${bimLevel} (Mult: ×${lodMult})`,
         amount: bimCost,
