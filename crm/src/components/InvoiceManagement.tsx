@@ -567,23 +567,23 @@ export default function InvoiceManagement({
       </div>
 
       {/* Invoices Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden">
+        <table className="w-full divide-y divide-gray-200 text-xs">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+              <th className="px-3.5 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                 Invoice & Status
               </th>
-              <th className="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+              <th className="px-3.5 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                 Client & Project Scope
               </th>
-              <th className="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+              <th className="px-3.5 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                 Amount (ZAR)
               </th>
-              <th className="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+              <th className="px-3.5 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                 Issued & Due Date
               </th>
-              <th className="px-6 py-3.5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">
+              <th className="px-3.5 py-3 text-right text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                 QuickBooks Actions
               </th>
             </tr>
@@ -601,11 +601,11 @@ export default function InvoiceManagement({
 
               return (
                 <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-mono font-bold text-gray-900">{invNo}</div>
-                    <div className="flex items-center space-x-1.5 mt-1">
+                  <td className="px-3.5 py-3 align-middle">
+                    <div className="font-mono font-bold text-gray-900 text-xs">{invNo}</div>
+                    <div className="flex flex-wrap items-center gap-1 mt-1">
                       <span
-                        className={`inline-block px-2.5 py-0.5 text-[10px] font-extrabold rounded-full ${
+                        className={`inline-block px-2 py-0.5 text-[9px] font-extrabold rounded-full ${
                           isPaid
                             ? 'bg-emerald-100 text-emerald-800'
                             : isPartial || (amountPaid > 0 && !isPaid)
@@ -626,7 +626,7 @@ export default function InvoiceManagement({
                               ? 'Automated Overdue Reminders are ON (Click to Pause)'
                               : 'Automated Overdue Reminders are PAUSED (Click to Enable)'
                           }
-                          className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
+                          className={`inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold border transition-colors cursor-pointer ${
                             autoRemindEnabled
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                               : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
@@ -638,12 +638,16 @@ export default function InvoiceManagement({
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-semibold text-gray-900">{inv.clientName}</div>
-                    <div className="text-xs text-gray-500 truncate max-w-xs">{inv.project}</div>
+                  <td className="px-3.5 py-3 align-middle max-w-[220px]">
+                    <div className="font-semibold text-gray-900 text-xs truncate" title={inv.clientName}>
+                      {inv.clientName}
+                    </div>
+                    <div className="text-[11px] text-gray-500 truncate" title={inv.project}>
+                      {inv.project}
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-black text-gray-900">{formatZAR(inv.amount)}</div>
+                  <td className="px-3.5 py-3 align-middle whitespace-nowrap">
+                    <div className="font-black text-gray-900 text-xs">{formatZAR(inv.amount)}</div>
                     {amountPaid > 0 && !isPaid && (
                       <div className="text-[10px] space-y-0.5 mt-0.5">
                         <div className="text-emerald-700 font-bold">Paid: {formatZAR(amountPaid)}</div>
@@ -651,17 +655,17 @@ export default function InvoiceManagement({
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                  <td className="px-3.5 py-3 align-middle whitespace-nowrap text-[11px] text-gray-500">
                     <div>
                       Issued: {new Date(inv.createdAt).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </div>
                     {inv.dueDate && !isPaid && (
-                      <div className="text-[11px] mt-0.5 flex items-center space-x-1.5">
+                      <div className="text-[10px] mt-0.5 flex items-center space-x-1">
                         <span className={isOverdue ? 'text-rose-700 font-bold' : 'text-gray-500'}>
                           Due: {new Date(inv.dueDate).toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' })}
                         </span>
                         {isOverdue && (
-                          <span className="bg-rose-100 text-rose-800 px-1.5 py-0.2 rounded text-[9px] font-extrabold">
+                          <span className="bg-rose-100 text-rose-800 px-1 py-0.2 rounded text-[9px] font-extrabold">
                             {daysOverdue}d OVERDUE
                           </span>
                         )}
@@ -673,27 +677,17 @@ export default function InvoiceManagement({
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-xs font-medium">
-                    <div className="flex items-center justify-end space-x-1.5">
-                      {/* Edit Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEdit(inv)}
-                        title="Edit Invoice Details & Line Items"
-                        className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors cursor-pointer"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-
+                  <td className="px-3.5 py-3 align-middle text-right text-xs font-medium">
+                    <div className="flex flex-wrap items-center justify-end gap-1 max-w-[330px] ml-auto">
                       {/* PDF View */}
                       <a
                         href={`/api/invoices/${inv.id}/pdf?v=${amountPaid}_${inv.status}_${inv.amount}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         title="View PDF Invoice Document"
-                        className="inline-flex items-center space-x-1 bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 font-semibold px-2.5 py-1.5 rounded-lg text-xs transition-colors shadow-2xs"
+                        className="inline-flex items-center space-x-1 bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 font-semibold px-2 py-1 rounded-md text-[11px] transition-colors shadow-2xs"
                       >
-                        <FileText className="w-3.5 h-3.5 text-orange-600" />
+                        <FileText className="w-3 h-3 text-orange-600" />
                         <span>PDF</span>
                       </a>
 
@@ -703,21 +697,11 @@ export default function InvoiceManagement({
                         target="_blank"
                         rel="noopener noreferrer"
                         title={`Generate Project Statement of Account for: ${inv.project}`}
-                        className="inline-flex items-center space-x-1 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-800 font-semibold px-2.5 py-1.5 rounded-lg text-xs transition-colors shadow-2xs"
+                        className="inline-flex items-center space-x-1 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-800 font-semibold px-2 py-1 rounded-md text-[11px] transition-colors shadow-2xs"
                       >
-                        <FileText className="w-3.5 h-3.5 text-amber-600" />
+                        <FileText className="w-3 h-3 text-amber-600" />
                         <span>Statement</span>
                       </a>
-
-                      {/* Send Email */}
-                      <button
-                        type="button"
-                        onClick={() => setEmailModalInvoice(inv)}
-                        title="Send PDF Invoice via Email (with CC & Attachments)"
-                        className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-colors cursor-pointer"
-                      >
-                        <Mail className="w-3.5 h-3.5" />
-                      </button>
 
                       {/* Send Payment Reminder (attaches Invoice PDF + Project Statement PDF) */}
                       {!isPaid && (
@@ -726,10 +710,10 @@ export default function InvoiceManagement({
                           disabled={sendingId === inv.id}
                           onClick={() => handleSendReminderNow(inv)}
                           title="Send Payment Reminder Email (with Invoice PDF + Project Statement PDF attached)"
-                          className="bg-orange-50 hover:bg-orange-100 text-orange-800 font-bold border border-orange-200 px-2 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex items-center space-x-1 disabled:opacity-50"
+                          className="bg-orange-50 hover:bg-orange-100 text-orange-800 font-bold border border-orange-200 px-2 py-1 rounded-md text-[11px] transition-colors cursor-pointer inline-flex items-center space-x-1 disabled:opacity-50"
                         >
-                          <Bell className="w-3.5 h-3.5 text-orange-600" />
-                          <span>{sendingId === inv.id ? 'Sending...' : 'Remind'}</span>
+                          <Bell className="w-3 h-3 text-orange-600" />
+                          <span>{sendingId === inv.id ? '...' : 'Remind'}</span>
                         </button>
                       )}
 
@@ -743,9 +727,9 @@ export default function InvoiceManagement({
                           setPaymentAmountInput(currentPaidVal > 0 ? currentPaidVal : inv.amount);
                         }}
                         title="Record or Update Deposit / Partial Payment"
-                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold border border-amber-200 px-2 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex items-center space-x-1"
+                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold border border-amber-200 px-2 py-1 rounded-md text-[11px] transition-colors cursor-pointer inline-flex items-center space-x-1"
                       >
-                        <DollarSign className="w-3.5 h-3.5 text-amber-600" />
+                        <DollarSign className="w-3 h-3 text-amber-600" />
                         <span>Payment</span>
                       </button>
 
@@ -761,24 +745,45 @@ export default function InvoiceManagement({
                             );
                             router.refresh();
                           }}
+                          className="inline"
                         >
                           <button
                             type="submit"
                             title="Mark Invoice as Paid in Full"
-                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold border border-emerald-200 px-2 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex items-center space-x-1"
+                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold border border-emerald-200 px-2 py-1 rounded-md text-[11px] transition-colors cursor-pointer inline-flex items-center space-x-1"
                           >
-                            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                            <CheckCircle className="w-3 h-3 text-emerald-600" />
                             <span>Paid</span>
                           </button>
                         </form>
                       )}
+
+                      {/* Edit Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(inv)}
+                        title="Edit Invoice Details & Line Items"
+                        className="p-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Send Email */}
+                      <button
+                        type="button"
+                        onClick={() => setEmailModalInvoice(inv)}
+                        title="Send PDF Invoice via Email (with CC & Attachments)"
+                        className="p-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md border border-blue-200 transition-colors cursor-pointer"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                      </button>
 
                       {/* Duplicate */}
                       <button
                         type="button"
                         onClick={() => handleDuplicate(inv.id)}
                         title="Duplicate Invoice"
-                        className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors cursor-pointer"
+                        className="p-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors cursor-pointer"
                       >
                         <Copy className="w-3.5 h-3.5" />
                       </button>
@@ -788,7 +793,7 @@ export default function InvoiceManagement({
                         type="button"
                         onClick={() => handleDelete(inv.id)}
                         title="Delete Invoice"
-                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors cursor-pointer"
+                        className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-md transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

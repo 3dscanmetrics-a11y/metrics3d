@@ -335,21 +335,21 @@ export default function ClientManagement({
       </div>
 
       {/* Clients Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 text-xs">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <table className="w-full divide-y divide-gray-200 text-xs">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3.5 text-left font-bold text-gray-500 uppercase tracking-wider">Account & Contact</th>
-              <th className="px-6 py-3.5 text-left font-bold text-gray-500 uppercase tracking-wider">Type & Industry</th>
-              <th className="px-6 py-3.5 text-left font-bold text-gray-500 uppercase tracking-wider">Tax & Terms</th>
-              <th className="px-6 py-3.5 text-left font-bold text-gray-500 uppercase tracking-wider">Billing Location</th>
-              <th className="px-6 py-3.5 text-right font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-4 py-3 text-left font-bold text-gray-500 uppercase tracking-wider">Account & Contact</th>
+              <th className="px-4 py-3 text-left font-bold text-gray-500 uppercase tracking-wider">Type & Industry</th>
+              <th className="px-4 py-3 text-left font-bold text-gray-500 uppercase tracking-wider">Tax & Terms</th>
+              <th className="px-4 py-3 text-left font-bold text-gray-500 uppercase tracking-wider">Billing Location</th>
+              <th className="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredClients.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
+                <td colSpan={5} className="px-4 py-10 text-center text-gray-500">
                   No clients match your search criteria. Click <strong>"Add New Client"</strong> to create a record.
                 </td>
               </tr>
@@ -358,7 +358,7 @@ export default function ClientManagement({
                 <tr key={client.id} className="hover:bg-gray-50/80 transition-colors">
                   
                   {/* Account & Contact */}
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3.5">
                     <div className="flex items-center space-x-3">
                       <div className="p-2.5 bg-orange-100/60 rounded-xl text-orange-700 font-bold shrink-0">
                         <Building size={18} />
@@ -373,7 +373,7 @@ export default function ClientManagement({
                           )}
                         </div>
                         {client.company && <div className="text-xs text-gray-500 font-medium">{client.company}</div>}
-                        <div className="flex items-center space-x-3 mt-1 text-[11px] text-gray-500">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[11px] text-gray-500">
                           <span className="flex items-center space-x-1">
                             <Mail size={12} className="text-gray-400" />
                             <span>{client.email}</span>
@@ -390,7 +390,7 @@ export default function ClientManagement({
                   </td>
 
                   {/* Type & Industry */}
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3.5">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
                       {client.clientType || 'Company'}
                     </span>
@@ -403,7 +403,7 @@ export default function ClientManagement({
                   </td>
 
                   {/* Tax & Terms */}
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3.5 whitespace-nowrap">
                     <div className="text-gray-900 font-medium">
                       VAT: <span className="font-mono text-gray-700">{client.vatNumber || client.taxNumber || 'N/A'}</span>
                     </div>
@@ -413,7 +413,7 @@ export default function ClientManagement({
                   </td>
 
                   {/* Billing Location */}
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                  <td className="px-4 py-3.5 text-gray-600">
                     {client.billingCity || client.billingCountry ? (
                       <div className="flex items-center space-x-1 text-xs">
                         <MapPin size={13} className="text-orange-600 shrink-0" />
@@ -427,7 +427,7 @@ export default function ClientManagement({
                   </td>
 
                   {/* Actions */}
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-xs">
+                  <td className="px-4 py-3.5 whitespace-nowrap text-right text-xs">
                     <div className="flex items-center justify-end space-x-2">
                       <button
                         type="button"
